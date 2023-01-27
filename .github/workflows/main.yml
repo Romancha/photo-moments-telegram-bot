@@ -3,7 +3,9 @@ name: ci
 on:
   push:
     branches:
-      - "master"
+      - 'master'
+    tags:
+      - 'v*'
 
 jobs:
   docker:
@@ -12,6 +14,21 @@ jobs:
       -
         name: Checkout
         uses: actions/checkout@v3
+      -
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            trueromancha/photo-moments
+            ghcr.io/romancha/photo-moments
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -36,8 +53,6 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            trueromancha/photo-moments:latest
-            ghcr.io/romancha/photo-moments:latest
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
