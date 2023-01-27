@@ -40,4 +40,4 @@ jobs:
           push: true
           tags: |
             trueromancha/photo-moments:latest
-            ghcr.io/Romancha/photo-moments:latest
+            ghcr.io/romancha/photo-moments:latest
