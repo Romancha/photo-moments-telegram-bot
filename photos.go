@@ -20,7 +20,7 @@ func getRandomPhotos(count int) []string {
 	var photosFromAllPaths []string
 
 	photos := find(cfg.photoPath, []string{".JPG", ".PNG", ".JPEG", ".jpg", ".png", ".jpeg", ".webp", ".WEBP", ".gif",
-		".GIF", ".tiff", ".TIFF", ".svg", ".SVG"})
+		".GIF"})
 	if len(photos) > 0 {
 		photosFromAllPaths = append(photosFromAllPaths, photos...)
 	}

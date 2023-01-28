@@ -58,6 +58,7 @@ func main() {
 				if _, err := bot.Send(msg); err != nil {
 					log.Panic(err)
 				}
+				continue
 			}
 
 			// Check if the user is allowed to use this bot

@@ -1,0 +1,10 @@
+version: '2'
+services:
+  photo-moments-app:
+    image: trueromancha/photo-moments:latest
+    volumes:
+      - /pathToYouPhotoLibrary/:/photoLibrary/
+    environment:
+      - FM_ALLOWED_USERS_ID=userId;userId2
+      - FM_CHAT_ID=chatId
+      - FM_TG_BOT_TOKEN=botToken
