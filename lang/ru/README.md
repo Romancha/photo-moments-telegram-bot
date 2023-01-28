@@ -38,6 +38,15 @@
 5. В ``volumes`` первый путь должен быть указан к папке на вашем устройстве c библиотекой фотографий.
 6. Выполнить команду для запуска ``docker-compose up -d``.
 
+Вы можете указать несколько папок с фотографиями, для этого вам нужно добавить несколько строк в ``volumes``:
+
+```yaml
+volumes:
+  - /home/user/photos:/photoLibrary/
+  - /home/user/photos2:/photoLibrary/
+  - /home/user/photos3:/photoLibrary/
+```
+
 ### Synology NAS
 
 Для запуска бота на Synology NAS можно использовать [Docker](https://www.synology.com/en-global/dsm/packages/Docker).

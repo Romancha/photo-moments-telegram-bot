@@ -37,6 +37,15 @@ To run from Docker, you need to do the following:
 5. In ``volumes``first path is the path to the folder with photos.
 6. Run command ``docker-compose up -d``.
 
+You can map multiple folders with photos, for example:
+
+```yaml
+volumes:
+  - /home/user/photos:/photoLibrary/
+  - /home/user/photos2:/photoLibrary/
+  - /home/user/photos3:/photoLibrary/
+```
+
 ### Synology NAS
 
 For Synology NAS, you can use the [Docker package](https://www.synology.com/en-us/dsm/packages/Docker).
