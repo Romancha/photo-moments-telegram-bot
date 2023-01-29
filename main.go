@@ -38,7 +38,7 @@ func main() {
 
 	msg := tgbotapi.NewMessage(cfg.chatId, startMessage)
 	if _, err := bot.Send(msg); err != nil {
-		log.Panic(err)
+		log.Println("Failed to send start message.", err)
 	}
 
 	c := cron.New()
@@ -52,12 +52,13 @@ func main() {
 			log.Printf("New message: [%s]: %d - %s", update.Message.From.UserName, update.Message.From.ID,
 				update.Message.Text)
 
-			// If the user send a command, send the information about the bot
-			if update.Message.IsCommand() {
+			// Reply info about bot to all users
+			if update.Message.IsCommand() && update.Message.Command() == "start" {
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, startMessage)
 				if _, err := bot.Send(msg); err != nil {
-					log.Panic(err)
+					log.Println("Failed send msg.", err)
 				}
+
 				continue
 			}
 
@@ -68,29 +69,50 @@ func main() {
 				continue
 			}
 
+			// If the user send a command, send the information about the bot
+			if update.Message.IsCommand() {
+				switch update.Message.Command() {
+				case "photo":
+					userPhotoCount, parseUserCountErr := strconv.Atoi(update.Message.CommandArguments())
+					if parseUserCountErr != nil {
+						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please send a number")
+						msg.ReplyToMessageID = update.Message.MessageID
+						_, err := bot.Send(msg)
+						if err != nil {
+							log.Println(err)
+						}
+					} else {
+						sendRandomPhoto(userPhotoCount, &update, bot)
+					}
+					continue
+				default:
+					continue
+				}
+			}
+
 			// If user send a number, send that many random photos
 			userPhotoCount, parseUserCountErr := strconv.Atoi(update.Message.Text)
-			if parseUserCountErr != nil {
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please send a number")
-				msg.ReplyToMessageID = update.Message.MessageID
-				_, err := bot.Send(msg)
-				if err != nil {
-					log.Println(err)
-				}
-				continue
-			} else {
-				sendRandomPhoto(userPhotoCount, &update.Message.MessageID, bot)
+			if parseUserCountErr == nil {
+				sendRandomPhoto(userPhotoCount, &update, bot)
 			}
 		}
 	}
 }
 
-func sendRandomPhoto(count int, replyMessageId *int, bot *tgbotapi.BotAPI) {
+func sendRandomPhoto(count int, update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+	var chatId int64
+	var replyMessageId *int
+	if update != nil {
+		chatId = update.Message.Chat.ID
+		replyMessageId = &update.Message.MessageID
+	} else {
+		chatId = cfg.chatId
+	}
+
+	var _, _ = bot.Send(tgbotapi.NewMessage(chatId, "📷 Sending random photos..."))
+
 	photoMedia := getRandomPhotoMedia(count)
-
-	_, _ = bot.Send(tgbotapi.NewMessage(cfg.chatId, "📷 Sending random photos..."))
-
-	mediaMsg := tgbotapi.NewMediaGroup(cfg.chatId, photoMedia)
+	mediaMsg := tgbotapi.NewMediaGroup(chatId, photoMedia)
 	if replyMessageId != nil {
 		mediaMsg.ReplyToMessageID = *replyMessageId
 	}

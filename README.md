@@ -14,7 +14,7 @@ The idea of the bot is to get random photos from your library every day and reme
 There are two triggers for sending random photos:
 
 - Scheduled [Cron](https://en.wikipedia.org/wiki/Cron)
-- Request photo by message. You can send a message to the bot with a number and it will send you a random photo from the
+- Request photo by message. You can send a message to the bot with just a number or command ``/photo [count]`` and it will send you a random photo from the
   library in response. Maximum number of photos is 10.
 
 At the moment, only the local photo library is supported, the path to which must be specified when starting the bot.

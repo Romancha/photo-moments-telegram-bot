@@ -67,7 +67,7 @@ func compressPhoto(path string) (compressedPath *string) {
 	// Open the original image file
 	buffer, err := bimg.Read(path)
 	if err != nil {
-		log.Panic(err)
+		log.Printf("Error reading image: %s. %s", path, err)
 	}
 
 	sourceImage := bimg.NewImage(buffer)
@@ -93,7 +93,7 @@ func compressPhoto(path string) (compressedPath *string) {
 	err = bimg.Write(compressedImagePath, compressedImage)
 
 	if err != nil {
-		log.Panic(err)
+		log.Printf("Error writing image: %s. %s", compressedImagePath, err)
 		return nil
 	}
 
