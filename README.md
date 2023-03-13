@@ -14,7 +14,8 @@ The idea of the bot is to get random photos from your library every day and reme
 There are two triggers for sending random photos:
 
 - Scheduled [Cron](https://en.wikipedia.org/wiki/Cron)
-- Request photo by message. You can send a message to the bot with just a number or command ``/photo [count]`` and it will send you a random photo from the
+- Request photo by message. You can send a message to the bot with just a number or command ``/photo [count]`` and it
+  will send you a random photo from the
   library in response. Maximum number of photos is 10.
 
 At the moment, only the local photo library is supported, the path to which must be specified when starting the bot.
@@ -65,4 +66,4 @@ Bot requires the image process library [libvips](https://www.libvips.org/).
 | FM_ALLOWED_USERS_ID     | Telegram user IDs that can use the bot. You can specify multiple id with separator ``;``                   |
 | FM_PHOTO_PATH           | Path to the photo library folder                                                                           |
 | FM_PHOTO_COUNT          | The number of photos that the bot will send according to the schedule. Default ``5``, maximum ``10``       |
-| FM_SEND_PHOTO_CRON_SPEC | [Cron](https://en.wikipedia.org/wiki/Cron) to send random photos. Default ``0 10-21/2 * * *``              |
+| FM_SEND_PHOTO_CRON_SPEC | [Cron](https://en.wikipedia.org/wiki/Cron) to send random photos. Default ``0 10 * * *``                   |

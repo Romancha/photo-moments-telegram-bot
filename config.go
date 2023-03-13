@@ -60,7 +60,7 @@ func getConfig() Config {
 		photoLibPath = overridePath
 	}
 
-	cronSpec := "0 10-21/2 * * *"
+	cronSpec := "0 10 * * *"
 	overrideCronSpec := os.Getenv(keyCronSpec)
 	if overrideCronSpec != "" {
 		cronSpec = overrideCronSpec
