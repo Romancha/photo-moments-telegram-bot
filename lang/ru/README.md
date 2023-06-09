@@ -34,7 +34,7 @@
 2. Создать вашего бота и получить токен у [@BotFather](https://t.me/BotFather).
 3. Узнать свой `chat_id` у [@userinfobot](https://t.me/userinfobot).
 4. Заполнить [docker-compose.yml](/docker/docker-compose.yml) файл обязательными
-   переменными ``FM_ALLOWED_USERS_ID``, ``FM_CHAT_ID``, ``FM_TG_BOT_TOKEN``, ``AUTOFON_API_PASSWORD``.
+   переменными ``FM_ALLOWED_USERS_ID``, ``FM_CHAT_ID``, ``FM_TG_BOT_TOKEN``.
    https://github.com/Romancha/photo-moments-telegram-bot/blob/f2cf105482d3eaca339c8d0faa9292240e53c813/docker/docker-compose.yml#L1-L10
 5. В ``volumes`` первый путь должен быть указан к папке на вашем устройстве c библиотекой фотографий.
 6. Выполнить команду для запуска ``docker-compose up -d``.

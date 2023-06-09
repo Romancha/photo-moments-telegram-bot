@@ -33,7 +33,7 @@ To run from Docker, you need to do the following:
 2. Create your bot and get a token from [@BotFather](https://t.me/BotFather).
 3. Get `chat_id` from [@userinfobot](https://t.me/userinfobot).
 4. Set mandatory
-   env [docker-compose.yml](/docker/docker-compose.yml): ``FM_ALLOWED_USERS_ID``, ``FM_CHAT_ID``, ``FM_TG_BOT_TOKEN``, ``AUTOFON_API_PASSWORD``.
+   env [docker-compose.yml](/docker/docker-compose.yml): ``FM_ALLOWED_USERS_ID``, ``FM_CHAT_ID``, ``FM_TG_BOT_TOKEN``.
    https://github.com/Romancha/photo-moments-telegram-bot/blob/f2cf105482d3eaca339c8d0faa9292240e53c813/docker/docker-compose.yml#L1-L10
 5. In ``volumes``first path is the path to the folder with photos.
 6. Run command ``docker-compose up -d``.
