@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-var compressedPhotoPath = os.TempDir() + "/" + "compressed"
+var tempProcessedPhotoPath = os.TempDir() + "/" + "compressed"
 
 var cfg = getConfig()
 
@@ -16,8 +16,8 @@ func main() {
 	log.Println("Starting bot with config:", cfg)
 
 	// Create the folder if it doesn't exist
-	if _, err := os.Stat(compressedPhotoPath); os.IsNotExist(err) {
-		err := os.MkdirAll(compressedPhotoPath, os.ModePerm)
+	if _, err := os.Stat(tempProcessedPhotoPath); os.IsNotExist(err) {
+		err := os.MkdirAll(tempProcessedPhotoPath, os.ModePerm)
 		if err != nil {
 			log.Panic(err)
 		}

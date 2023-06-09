@@ -18,7 +18,8 @@ func find(root string, ext []string) []string {
 		}
 
 		if e != nil {
-			return e
+			log.Panic(e)
+			return nil
 		}
 		if !d.IsDir() && contains(ext, filepath.Ext(d.Name())) {
 			a = append(a, s)

@@ -20,7 +20,7 @@ func getRandomPhotos(count int) []string {
 	var photosFromAllPaths []string
 
 	photos := find(cfg.photoPath, []string{".JPG", ".PNG", ".JPEG", ".jpg", ".png", ".jpeg", ".webp", ".WEBP", ".gif",
-		".GIF"})
+		".GIF", ".HEIC", ".heic"})
 	if len(photos) > 0 {
 		photosFromAllPaths = append(photosFromAllPaths, photos...)
 	}
@@ -45,7 +45,7 @@ func getRandomPhotos(count int) []string {
 	}
 
 	for _, i := range random {
-		compressedPhoto := compressPhoto(photosFromAllPaths[i])
+		compressedPhoto := processPhoto(photosFromAllPaths[i])
 
 		if compressedPhoto == nil {
 			continue
@@ -59,10 +59,35 @@ func getRandomPhotos(count int) []string {
 	return randomPhotos
 }
 
-func compressPhoto(path string) (compressedPath *string) {
+func processPhoto(path string) (compressedPath *string) {
 	log.Println("Compressing photo: ", path)
 
 	imageName := filepath.Base(path)
+	imageExt := filepath.Ext(path)
+
+	// convert HEIC to JPG
+	if imageExt == ".heic" || imageExt == ".HEIC" {
+		log.Println("Converting HEIC to JPG")
+		heicImage, err := bimg.Read(path)
+		if err != nil {
+			log.Printf("Error reading image: %s. %s", path, err)
+		}
+
+		jpgImage, err := bimg.NewImage(heicImage).Convert(bimg.JPEG)
+		if err != nil {
+			log.Printf("Error converting image: %s. %s", path, err)
+		}
+
+		convertedImagePath := tempProcessedPhotoPath + "/" + imageName + ".jpg"
+		log.Println("Save converted image to:", convertedImagePath)
+		err = bimg.Write(convertedImagePath, jpgImage)
+		if err != nil {
+			log.Printf("Error writing image: %s. %s", convertedImagePath, err)
+			return nil
+		}
+
+		path = convertedImagePath
+	}
 
 	// Open the original image file
 	buffer, err := bimg.Read(path)
@@ -87,7 +112,7 @@ func compressPhoto(path string) (compressedPath *string) {
 	newSizeInMb := float64(len(compressedImage)) / 1024 / 1024
 	log.Println("Compressed image size: ", newSizeInMb, "Mb")
 
-	compressedImagePath := compressedPhotoPath + "/" + imageName
+	compressedImagePath := tempProcessedPhotoPath + "/" + imageName
 	log.Println("Save compressed image to:", compressedImagePath)
 
 	err = bimg.Write(compressedImagePath, compressedImage)
@@ -101,12 +126,12 @@ func compressPhoto(path string) (compressedPath *string) {
 }
 
 func clearCompressedPhotos() {
-	files, err := os.ReadDir(compressedPhotoPath)
+	files, err := os.ReadDir(tempProcessedPhotoPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, file := range files {
-		filePath := compressedPhotoPath + "/" + file.Name()
+		filePath := tempProcessedPhotoPath + "/" + file.Name()
 		log.Println("Removing file:", filePath)
 
 		err := os.Remove(filePath)
