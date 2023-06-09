@@ -19,7 +19,7 @@ There are two triggers for sending random photos:
   library in response. Maximum number of photos is 10.
 
 At the moment, only the local photo library is supported, the path to which must be specified when starting the bot.
-Supported image formats: ``jpg``, ``png``, ``gif``, ``webp``.
+Supported image formats: ``jpg``, ``png``, ``gif``, ``webp``, ``heic``.
 If the photo is larger than 6 MB, it will be compressed before sending.
 
 ## Run
