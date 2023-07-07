@@ -60,7 +60,7 @@ func getRandomPhotos(count int) []string {
 }
 
 func processPhoto(path string) (compressedPath *string) {
-	log.Println("Compressing photo: ", path)
+	log.Println("Checking for compression photo: ", path)
 
 	imageName := filepath.Base(path)
 	imageExt := filepath.Ext(path)
@@ -90,14 +90,14 @@ func processPhoto(path string) (compressedPath *string) {
 	}
 
 	// Open the original image file
-	buffer, err := bimg.Read(path)
+	originalImage, err := bimg.Read(path)
 	if err != nil {
 		log.Printf("Error reading image: %s. %s", path, err)
 	}
 
-	sourceImage := bimg.NewImage(buffer)
-	originalSizeInMb := float64(sourceImage.Length()) / 1024 / 1024
-	originalSize, _ := sourceImage.Size()
+	bImageOriginal := bimg.NewImage(originalImage)
+	originalSizeInMb := float64(bImageOriginal.Length()) / 1024 / 1024
+	originalSize, _ := bImageOriginal.Size()
 	originalSizeTotal := originalSize.Width + originalSize.Height
 
 	log.Println("Original image size:", originalSizeInMb, "Mb,", "total width+height:", originalSizeTotal)
@@ -108,7 +108,17 @@ func processPhoto(path string) (compressedPath *string) {
 		return &path
 	}
 
-	compressedImage, _ := sourceImage.Resize(1920, 1080)
+	compressOptions := bimg.Options{
+		Quality:      90,
+		Compression:  6,
+		NoAutoRotate: true,
+	}
+	compressedImage, err := bimg.Resize(originalImage, compressOptions)
+	if err != nil {
+		log.Printf("Error compressing image: %s. %s", path, err)
+		return nil
+	}
+
 	newSizeInMb := float64(len(compressedImage)) / 1024 / 1024
 	log.Println("Compressed image size: ", newSizeInMb, "Mb")
 
