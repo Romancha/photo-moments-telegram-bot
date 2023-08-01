@@ -14,8 +14,8 @@
 Photo Moments Telegram Bot отправляет случайные фотографии из вашей коллекции в Telegram, помогая вам вспомнить приятные
 моменты.
 
-<img src="../../images/example_photo.png" width="400px">
-<img src="../../images/example_photo_info.png" width="400px">
+<img src="../../images/example_photo.jpg" width="400px">
+<img src="../../images/example_photo_info.jpg" width="400px">
 
 ## Возможности
 
