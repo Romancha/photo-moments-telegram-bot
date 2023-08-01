@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"io/fs"
 	"log"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 func find(root string, ext []string) []string {
@@ -46,4 +49,50 @@ func containsInt(s []int64, e int64) bool {
 		}
 	}
 	return false
+}
+
+func convertGPSCoordinatesToFloat(coord string) (float64, error) {
+	parts := strings.Split(coord, " ")
+	if len(parts) != 3 {
+		return 0, fmt.Errorf("invalid GPS coordinate format: %s", coord)
+	}
+
+	degrees, err := parseFraction(parts[0])
+	if err != nil {
+		return 0, err
+	}
+
+	minutes, err := parseFraction(parts[1])
+	if err != nil {
+		return 0, err
+	}
+
+	seconds, err := parseFraction(parts[2])
+	if err != nil {
+		return 0, err
+	}
+
+	// Calculate the total decimal degrees
+	decimalDegrees := degrees + minutes/60.0 + seconds/3600.0
+
+	return decimalDegrees, nil
+}
+
+func parseFraction(fractionStr string) (float64, error) {
+	parts := strings.Split(fractionStr, "/")
+	if len(parts) != 2 {
+		return 0, fmt.Errorf("invalid fraction format: %s", fractionStr)
+	}
+
+	numerator, err := strconv.ParseFloat(parts[0], 64)
+	if err != nil {
+		return 0, err
+	}
+
+	denominator, err := strconv.ParseFloat(parts[1], 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return numerator / denominator, nil
 }

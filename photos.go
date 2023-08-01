@@ -16,7 +16,8 @@ func getRandomPhotos(count int) []string {
 		count = 10
 	}
 
-	var randomPhotos []string
+	var processedPhotos []string
+	var originalPhotos []string
 	var photosFromAllPaths []string
 
 	photos := find(cfg.photoPath, []string{".JPG", ".PNG", ".JPEG", ".jpg", ".png", ".jpeg", ".webp", ".WEBP", ".gif",
@@ -45,18 +46,23 @@ func getRandomPhotos(count int) []string {
 	}
 
 	for _, i := range random {
-		compressedPhoto := processPhoto(photosFromAllPaths[i])
+		var randomPhoto = photosFromAllPaths[i]
+		compressedPhoto := processPhoto(randomPhoto)
 
 		if compressedPhoto == nil {
 			continue
 		}
 
-		randomPhotos = append(randomPhotos, *compressedPhoto)
+		processedPhotos = append(processedPhotos, *compressedPhoto)
+		originalPhotos = append(originalPhotos, randomPhoto)
 	}
 
-	log.Println("Random photos:", randomPhotos)
+	lastPhotos = originalPhotos
 
-	return randomPhotos
+	log.Println("Random photos:", processedPhotos)
+	log.Println("Original photos:", originalPhotos)
+
+	return processedPhotos
 }
 
 func processPhoto(path string) (compressedPath *string) {

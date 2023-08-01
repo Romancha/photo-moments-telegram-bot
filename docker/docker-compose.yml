@@ -1,4 +1,3 @@
-version: '2'
 services:
   photo-moments-app:
     image: trueromancha/photo-moments:latest

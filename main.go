@@ -12,6 +12,8 @@ var tempProcessedPhotoPath = os.TempDir() + "/" + "compressed"
 
 var cfg = getConfig()
 
+var lastPhotos []string
+
 func main() {
 	log.Println("Starting bot with config:", cfg)
 
@@ -36,10 +38,10 @@ func main() {
 
 	updates := bot.GetUpdatesChan(u)
 
-	msg := tgbotapi.NewMessage(cfg.chatId, startMessage)
-	if _, err := bot.Send(msg); err != nil {
-		log.Println("Failed to send start message.", err)
-	}
+	//msg := tgbotapi.NewMessage(cfg.chatId, startMessage)
+	//if _, err := bot.Send(msg); err != nil {
+	//	log.Println("Failed to send start message.", err)
+	//}
 
 	c := cron.New()
 	c.AddFunc(cfg.cronSpec, func() {
@@ -75,16 +77,40 @@ func main() {
 				case "photo":
 					userPhotoCount, parseUserCountErr := strconv.Atoi(update.Message.CommandArguments())
 					if parseUserCountErr != nil {
-						msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please send a number")
-						msg.ReplyToMessageID = update.Message.MessageID
-						_, err := bot.Send(msg)
-						if err != nil {
-							log.Println(err)
-						}
-					} else {
-						sendRandomPhoto(userPhotoCount, &update, bot)
+						sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
+							"Please send a number")
+						continue
 					}
-					continue
+
+					sendRandomPhoto(userPhotoCount, &update, bot)
+				case "paths":
+					if len(lastPhotos) == 0 {
+						sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot, "No photos sent yet")
+						continue
+					}
+
+					sendLastPhotosPathMessage(update.Message.Chat.ID, update.Message.MessageID, bot)
+				case "info":
+					photoNumber, parsePhotoNumberErr := strconv.Atoi(update.Message.CommandArguments())
+					if parsePhotoNumberErr != nil {
+						sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
+							"Please send a number")
+						continue
+					}
+
+					if len(lastPhotos) == 0 {
+						sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot, "No photos sent yet")
+						continue
+					}
+
+					if photoNumber < 1 || photoNumber > len(lastPhotos) {
+						sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
+							"Please send a number in range of last sent photos")
+						continue
+					}
+
+					sendPhotoDescriptionMessage(update.Message.Chat.ID, update.Message.MessageID, bot,
+						lastPhotos[photoNumber-1])
 				default:
 					continue
 				}
@@ -100,28 +126,7 @@ func main() {
 }
 
 func sendRandomPhoto(count int, update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
-	var chatId int64
-	var replyMessageId *int
-	if update != nil {
-		chatId = update.Message.Chat.ID
-		replyMessageId = &update.Message.MessageID
-	} else {
-		chatId = cfg.chatId
-	}
-
-	var _, _ = bot.Send(tgbotapi.NewMessage(chatId, "📷 Sending random photos..."))
-
-	photoMedia := getRandomPhotoMedia(count)
-	mediaMsg := tgbotapi.NewMediaGroup(chatId, photoMedia)
-	if replyMessageId != nil {
-		mediaMsg.ReplyToMessageID = *replyMessageId
-	}
-
-	_, err := bot.Send(mediaMsg)
-	if err != nil {
-		log.Println(err)
-	}
-
+	sendRandomPhotoMessage(count, update, bot)
 	clearCompressedPhotos()
 }
 
