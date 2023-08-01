@@ -38,15 +38,18 @@ func main() {
 
 	updates := bot.GetUpdatesChan(u)
 
-	//msg := tgbotapi.NewMessage(cfg.chatId, startMessage)
-	//if _, err := bot.Send(msg); err != nil {
-	//	log.Println("Failed to send start message.", err)
-	//}
+	msg := tgbotapi.NewMessage(cfg.chatId, startMessage)
+	if _, err := bot.Send(msg); err != nil {
+		log.Println("Failed to send start message.", err)
+	}
 
 	c := cron.New()
-	c.AddFunc(cfg.cronSpec, func() {
+	_, err = c.AddFunc(cfg.cronSpec, func() {
 		sendRandomPhoto(-1, nil, bot)
 	})
+	if err != nil {
+		panic("Failed to add cron job.")
+	}
 	c.Start()
 
 	for update := range updates {
