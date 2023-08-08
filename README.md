@@ -11,8 +11,7 @@
 
 ## Introduction
 
-The Photo Moments Telegram Bot sends random photos from your collection to Telegram, helping you remember the good
-times.
+The Photo Moments Telegram Bot delivers serendipitous snapshots from your personal collection straight to Telegram, enabling you to fondly reminisce about cherished memories.
 
 <img src="images/example_photo.jpg" width="400px">
 <img src="images/example_photo_info.jpg" width="400px">
