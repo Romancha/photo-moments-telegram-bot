@@ -120,9 +120,11 @@ func main() {
 			}
 
 			// If user send a number, send that many random photos
-			userPhotoCount, parseUserCountErr := strconv.Atoi(update.Message.Text)
-			if parseUserCountErr == nil {
-				sendRandomPhoto(userPhotoCount, &update, bot)
+			if cfg.sendPhotosByNumber {
+				userPhotoCount, parseUserCountErr := strconv.Atoi(update.Message.Text)
+				if parseUserCountErr == nil {
+					sendRandomPhoto(userPhotoCount, &update, bot)
+				}
 			}
 		}
 	}

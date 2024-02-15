@@ -13,18 +13,21 @@ var keyBotToken = "FM_TG_BOT_TOKEN"
 var keyPhotoCount = "FM_PHOTO_COUNT"
 var keyPhotoPath = "FM_PHOTO_PATH"
 var keyCronSpec = "FM_SEND_PHOTO_CRON_SPEC"
+var keySendPhotosByNumber = "FM_SEND_PHOTOS_BY_NUMBER"
 var keyDebug = "FM_DEBUG"
 
 type Config struct {
-	chatId         int64
-	allowedUserIds []int64
-	botToken       string
-	photoCount     int
-	photoPath      string
-	cronSpec       string
-	debug          bool
+	chatId             int64
+	allowedUserIds     []int64
+	botToken           string
+	photoCount         int
+	photoPath          string
+	cronSpec           string
+	sendPhotosByNumber bool
+	debug              bool
 }
 
+// TODO: rewrite configs with go-flags
 func getConfig() Config {
 
 	chatIdEnv := os.Getenv(keyChatId)
@@ -66,6 +69,12 @@ func getConfig() Config {
 		cronSpec = overrideCronSpec
 	}
 
+	sendPhotosByNumber := false
+	overrideSendPhotosByNumber, err := strconv.ParseBool(os.Getenv(keySendPhotosByNumber))
+	if err == nil {
+		sendPhotosByNumber = overrideSendPhotosByNumber
+	}
+
 	debug := false
 	debugEnv, err := strconv.ParseBool(os.Getenv(keyDebug))
 	if err == nil {
@@ -73,12 +82,13 @@ func getConfig() Config {
 	}
 
 	return Config{
-		chatId:         int64(chatId),
-		allowedUserIds: allowedUserIds,
-		botToken:       os.Getenv(keyBotToken),
-		photoCount:     parsedCount,
-		photoPath:      photoLibPath,
-		cronSpec:       cronSpec,
-		debug:          debug,
+		chatId:             int64(chatId),
+		allowedUserIds:     allowedUserIds,
+		botToken:           os.Getenv(keyBotToken),
+		photoCount:         parsedCount,
+		photoPath:          photoLibPath,
+		cronSpec:           cronSpec,
+		sendPhotosByNumber: sendPhotosByNumber,
+		debug:              debug,
 	}
 }

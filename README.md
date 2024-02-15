@@ -11,7 +11,8 @@
 
 ## Introduction
 
-The Photo Moments Telegram Bot delivers serendipitous snapshots from your personal collection straight to Telegram, enabling you to fondly reminisce about cherished memories.
+The Photo Moments Telegram Bot delivers serendipitous snapshots from your personal collection straight to Telegram,
+enabling you to fondly reminisce about cherished memories.
 
 <img src="images/example_photo.jpg" width="400px">
 <img src="images/example_photo_info.jpg" width="400px">
@@ -62,14 +63,15 @@ library [libvips](https://www.libvips.org/).
 
 ## Configuration
 
-| Param                   | Description                                                                                                |
-|-------------------------|------------------------------------------------------------------------------------------------------------|
-| FM_TG_BOT_TOKEN         | Telegram bot token, take from [@BotFather](https://t.me/BotFather)                                         |
-| FM_CHAT_ID              | Chat ID where the bot will send messages. [@userinfobot](https://t.me/userinfobot) Can help to get chat id |
-| FM_ALLOWED_USERS_ID     | Telegram user IDs that can use the bot. You can specify multiple id with separator ``;``                   |
-| FM_PHOTO_PATH           | Path to the photo library folder                                                                           |
-| FM_PHOTO_COUNT          | The number of photos that the bot will send according to the schedule. Default ``5``, maximum ``10``       |
-| FM_SEND_PHOTO_CRON_SPEC | [Cron](https://en.wikipedia.org/wiki/Cron) to send random photos. Default ``0 10 * * *``                   |
+| Param                    | Description                                                                                                |
+|--------------------------|------------------------------------------------------------------------------------------------------------|
+| FM_TG_BOT_TOKEN          | Telegram bot token, take from [@BotFather](https://t.me/BotFather)                                         |
+| FM_CHAT_ID               | Chat ID where the bot will send messages. [@userinfobot](https://t.me/userinfobot) Can help to get chat id |
+| FM_ALLOWED_USERS_ID      | Telegram user IDs that can use the bot. You can specify multiple id with separator ``;``                   |
+| FM_PHOTO_PATH            | Path to the photo library folder                                                                           |
+| FM_PHOTO_COUNT           | The number of photos that the bot will send according to the schedule. Default ``5``, maximum ``10``       |
+| FM_SEND_PHOTOS_BY_NUMBER | Send photos by number. Default ``true``                                                                    |
+| FM_SEND_PHOTO_CRON_SPEC  | [Cron](https://en.wikipedia.org/wiki/Cron) to send random photos. Default ``0 10 * * *``                   |
 
 ## Commands
 
