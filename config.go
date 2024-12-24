@@ -69,7 +69,7 @@ func getConfig() Config {
 		cronSpec = overrideCronSpec
 	}
 
-	sendPhotosByNumber := false
+	sendPhotosByNumber := true
 	overrideSendPhotosByNumber, err := strconv.ParseBool(os.Getenv(keySendPhotosByNumber))
 	if err == nil {
 		sendPhotosByNumber = overrideSendPhotosByNumber

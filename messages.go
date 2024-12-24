@@ -1,7 +1,7 @@
 package main
 
 import (
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 	"github.com/h2non/bimg"
 	"log"
 	"strconv"
@@ -91,7 +91,7 @@ func sendRandomPhotoMessage(count int, update *tgbotapi.Update, bot *tgbotapi.Bo
 	photoMedia := getRandomPhotoMedia(count)
 	mediaMsg := tgbotapi.NewMediaGroup(chatId, photoMedia)
 	if replyMessageId != nil {
-		mediaMsg.ReplyToMessageID = *replyMessageId
+		mediaMsg.ReplyParameters.MessageID = *replyMessageId
 	}
 
 	_, err := bot.Send(mediaMsg)
@@ -112,7 +112,7 @@ func sendLastPhotosPathMessage(chatId int64, messageId int, bot *tgbotapi.BotAPI
 
 func sendSafeReplyText(chatId int64, replyMessageId int, bot *tgbotapi.BotAPI, text string) {
 	msg := tgbotapi.NewMessage(chatId, text)
-	msg.ReplyToMessageID = replyMessageId
+	msg.ReplyParameters.MessageID = replyMessageId
 
 	_, err := bot.Send(msg)
 	if err != nil {
