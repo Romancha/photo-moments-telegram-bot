@@ -1,8 +1,6 @@
 module photo-moments
 
-go 1.23
-
-toolchain go1.23.4
+go 1.23.4
 
 require (
 	github.com/OvyFlash/telegram-bot-api v0.0.0-20241219171906-3f2ca0c14ada
