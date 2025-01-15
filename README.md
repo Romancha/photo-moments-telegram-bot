@@ -19,30 +19,28 @@ enabling you to fondly reminisce about cherished memories.
 
 ## Features
 
-- Get random photos from your library on a schedule using [Cron](https://en.wikipedia.org/wiki/Cron).
-- Request random photos by sending a message with a number or using the `/photo [count]` command. Maximum 10 photos per
-  request.
-- Supports various image formats: `jpg`, `png`, `gif`, `webp`, `heic`.
-- Automatic compression of photos larger than 6 MB before sending.
-- Show info about photo - path, time, camera model, GPS location.
+- **Random Photos on Schedule**: Fetch random photos from your library using [Cron](https://en.wikipedia.org/wiki/Cron).
+- **On-Demand Random Photos**: Request random photos by sending a message with a number or using the `/photo [count]`
+  command. Maximum 10 photos per request.
+- **Broad Image Format Support**: `jpg`, `png`, `gif`, `webp`, `heic`.
+- **Automatic Compression** of large photos (>6 MB) before sending.
+- **Detailed Photo Info**: EXIF-based details (path, date, camera model, GPS location) via `/info`.
 
 ## Installation and Usage
 
 ### Docker
 
-To run from Docker, you need to do the following:
-
-1. Install [Docker](https://docs.docker.com/get-docker/)
-   and [Docker Compose](https://docs.docker.com/compose/install/).
+1. Install [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
 2. Create your bot and get a token from [@BotFather](https://t.me/BotFather).
 3. Get `chat_id` from [@userinfobot](https://t.me/userinfobot).
 4. Set mandatory
-   env [docker-compose.yml](/docker/docker-compose.yml): ``FM_ALLOWED_USERS_ID``, ``FM_CHAT_ID``, ``FM_TG_BOT_TOKEN``.
+   env [docker-compose.yml](/docker/docker-compose.yml): ``FM_ALLOWED_USERS_ID``, ``FM_CHAT_ID``, ``FM_TG_BOT_TOKEN``,
+   ``FM_DB_PATH``.
    https://github.com/Romancha/photo-moments-telegram-bot/blob/f2cf105482d3eaca339c8d0faa9292240e53c813/docker/docker-compose.yml#L1-L10
 5. Configure the volumes in `docker-compose.yml` to map your photo folders.
-6. Run command ``docker-compose up -d``.
+6. Run `docker-compose up -d`.
 
-You can map multiple folders with photos, for example:
+Example multi-folder volume mapping:
 
 ```yaml
 volumes:
@@ -69,6 +67,7 @@ library [libvips](https://www.libvips.org/).
 | FM_CHAT_ID               | Chat ID where the bot will send messages. [@userinfobot](https://t.me/userinfobot) Can help to get chat id |
 | FM_ALLOWED_USERS_ID      | Telegram user IDs that can use the bot. You can specify multiple id with separator ``;``                   |
 | FM_PHOTO_PATH            | Path to the photo library folder                                                                           |
+| FM_DB_PATH               | Path to the db file. Default ``photo_moments.db``.                                                         |
 | FM_PHOTO_COUNT           | The number of photos that the bot will send according to the schedule. Default ``5``, maximum ``10``       |
 | FM_SEND_PHOTOS_BY_NUMBER | Send photos by number. Default ``true``                                                                    |
 | FM_SEND_PHOTO_CRON_SPEC  | [Cron](https://en.wikipedia.org/wiki/Cron) to send random photos. Default ``0 10 * * *``                   |
@@ -81,6 +80,7 @@ library [libvips](https://www.libvips.org/).
 | /photo [count] | Send random photo from library. ``count`` - count of photos                                                |
 | /paths         | Show paths of last sent photos                                                                             |
 | /info [number] | Show info about photo - path, time, camera, GPS location. ``number`` - sequence number of last sent photos |
+| /info          | If replying to a specific photo, shows info about that exact photo                                         |
 
 ## Contributing
 

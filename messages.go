@@ -86,28 +86,71 @@ func sendRandomPhotoMessage(count int, update *tgbotapi.Update, bot *tgbotapi.Bo
 		chatId = cfg.chatId
 	}
 
-	var _, _ = bot.Send(tgbotapi.NewMessage(chatId, "📷 Sending random photos..."))
+	bot.Send(tgbotapi.NewMessage(chatId, "📷 Sending random photos..."))
 
-	photoMedia := getRandomPhotoMedia(count)
-	mediaMsg := tgbotapi.NewMediaGroup(chatId, photoMedia)
+	// 1) Get the next sending number
+	sendingNumber := getNextSendingNumber()
+
+	// 2) Gather photos
+	randomPhotoPaths := getRandomPhotos(count)
+	var mediaGroup []interface{}
+
+	// We'll store the "originalPaths" in the DB too
+	var photoRecords []PhotoRecord
+	for i, path := range randomPhotoPaths {
+		photo := tgbotapi.NewInputMediaPhoto(tgbotapi.FilePath(path))
+
+		// set caption only for the first photo
+		if i == 0 {
+			caption := "#" + strconv.Itoa(sendingNumber)
+			photo.Caption = caption
+		}
+
+		mediaGroup = append(mediaGroup, photo)
+	}
+
+	mediaMsg := tgbotapi.NewMediaGroup(chatId, mediaGroup)
 	if replyMessageId != nil {
 		mediaMsg.ReplyParameters.MessageID = *replyMessageId
 	}
 
-	_, err := bot.Send(mediaMsg)
+	sentMessages, err := bot.SendMediaGroup(mediaMsg)
 	if err != nil {
 		log.Println(err)
-	}
-}
-
-func sendLastPhotosPathMessage(chatId int64, messageId int, bot *tgbotapi.BotAPI) {
-	var lastPhotosInfo string
-
-	for index, photo := range lastPhotos {
-		lastPhotosInfo += strconv.Itoa(index+1) + ". " + photo + "\n"
+		return
 	}
 
-	sendSafeReplyText(chatId, messageId, bot, lastPhotosInfo)
+	// 3) Store each photo’s message ID individually
+	//    and also build the "PhotoSending" record
+	for i, msg := range sentMessages {
+		originalPath := lastPhotos[i]
+
+		// We'll store a single record:
+		// photoMsgID -> (sendingNumber, i+1, path)
+		meta := PhotoMessageMeta{
+			SendingNumber: sendingNumber,
+			PhotoIndex:    i + 1,
+			PhotoPath:     originalPath,
+		}
+		err := storePhotoMsgMeta(msg.MessageID, meta)
+		if err != nil {
+			log.Println("failed to store photo meta", err)
+		}
+
+		// Also populate array for group-level record
+		photoRecords = append(photoRecords, PhotoRecord{
+			Number: i + 1,
+			Path:   originalPath,
+		})
+	}
+
+	// 4) Finally, store group-level sending record
+	ps := PhotoSending{
+		NumberOfSending: sendingNumber,
+		MessageId:       sentMessages[0].MessageID,
+		Photos:          photoRecords,
+	}
+	storeSending(ps)
 }
 
 func sendSafeReplyText(chatId int64, replyMessageId int, bot *tgbotapi.BotAPI, text string) {

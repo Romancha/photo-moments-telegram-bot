@@ -12,6 +12,7 @@ var keyAllowedUsers = "FM_ALLOWED_USERS_ID"
 var keyBotToken = "FM_TG_BOT_TOKEN"
 var keyPhotoCount = "FM_PHOTO_COUNT"
 var keyPhotoPath = "FM_PHOTO_PATH"
+var keyDbPath = "FM_DB_PATH"
 var keyCronSpec = "FM_SEND_PHOTO_CRON_SPEC"
 var keySendPhotosByNumber = "FM_SEND_PHOTOS_BY_NUMBER"
 var keyDebug = "FM_DEBUG"
@@ -22,6 +23,7 @@ type Config struct {
 	botToken           string
 	photoCount         int
 	photoPath          string
+	dbPath             string
 	cronSpec           string
 	sendPhotosByNumber bool
 	debug              bool
@@ -63,6 +65,12 @@ func getConfig() Config {
 		photoLibPath = overridePath
 	}
 
+	dbPath := "photo_moments.db"
+	overrideDbPath := os.Getenv(keyDbPath)
+	if overrideDbPath != "" {
+		dbPath = overrideDbPath
+	}
+
 	cronSpec := "0 10 * * *"
 	overrideCronSpec := os.Getenv(keyCronSpec)
 	if overrideCronSpec != "" {
@@ -87,6 +95,7 @@ func getConfig() Config {
 		botToken:           os.Getenv(keyBotToken),
 		photoCount:         parsedCount,
 		photoPath:          photoLibPath,
+		dbPath:             dbPath,
 		cronSpec:           cronSpec,
 		sendPhotosByNumber: sendPhotosByNumber,
 		debug:              debug,

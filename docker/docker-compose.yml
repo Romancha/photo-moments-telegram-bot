@@ -3,7 +3,9 @@ services:
     image: trueromancha/photo-moments:latest
     volumes:
       - /pathToYouPhotoLibrary/:/photoLibrary/
+      - /pathToYouDbStorage/:/dbStorage/
     environment:
       - FM_ALLOWED_USERS_ID=userId;userId2
       - FM_CHAT_ID=chatId
       - FM_TG_BOT_TOKEN=botToken
+      - FM_DB_PATH=/dbStorage/photo-moments.db
