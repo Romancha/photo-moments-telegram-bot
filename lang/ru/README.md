@@ -38,7 +38,7 @@ Photo Moments Telegram Bot отправляет случайные фотогр�
 3. Узнать свой `chat_id` у [@userinfobot](https://t.me/userinfobot).
 4. Заполнить [docker-compose.yml](/docker/docker-compose.yml) файл обязательными
    переменными ``FM_ALLOWED_USERS_ID``, ``FM_CHAT_ID``, ``FM_TG_BOT_TOKEN``, ``FM_DB_PATH``.
-   https://github.com/Romancha/photo-moments-telegram-bot/blob/f2cf105482d3eaca339c8d0faa9292240e53c813/docker/docker-compose.yml#L1-L10
+   https://github.com/Romancha/photo-moments-telegram-bot/blob/4ddf78c5b379473ae55b2b0327405199de3b0d81/docker/docker-compose.yml#L1-L11
 5. Сконфигурировать ``volumes`` для указания расположения библиотеки фотографий на вашем устройстве.
 6. Выполнить команду для запуска ``docker-compose up -d``.
 

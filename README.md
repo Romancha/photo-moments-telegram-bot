@@ -36,7 +36,7 @@ enabling you to fondly reminisce about cherished memories.
 4. Set mandatory
    env [docker-compose.yml](/docker/docker-compose.yml): ``FM_ALLOWED_USERS_ID``, ``FM_CHAT_ID``, ``FM_TG_BOT_TOKEN``,
    ``FM_DB_PATH``.
-   https://github.com/Romancha/photo-moments-telegram-bot/blob/f2cf105482d3eaca339c8d0faa9292240e53c813/docker/docker-compose.yml#L1-L10
+   https://github.com/Romancha/photo-moments-telegram-bot/blob/4ddf78c5b379473ae55b2b0327405199de3b0d81/docker/docker-compose.yml#L1-L11
 5. Configure the volumes in `docker-compose.yml` to map your photo folders.
 6. Run `docker-compose up -d`.
 
