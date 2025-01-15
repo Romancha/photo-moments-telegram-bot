@@ -78,7 +78,6 @@ library [libvips](https://www.libvips.org/).
 |----------------|------------------------------------------------------------------------------------------------------------|
 | [number]       | Send random photo from library. ``number`` - count of photos                                               |
 | /photo [count] | Send random photo from library. ``count`` - count of photos                                                |
-| /paths         | Show paths of last sent photos                                                                             |
 | /info [number] | Show info about photo - path, time, camera, GPS location. ``number`` - sequence number of last sent photos |
 | /info          | If replying to a specific photo, shows info about that exact photo                                         |
 
