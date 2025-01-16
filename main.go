@@ -125,8 +125,6 @@ func main() {
 			if cfg.sendPhotosByNumber {
 				userPhotoCount, parseUserCountErr := strconv.Atoi(update.Message.Text)
 				if parseUserCountErr != nil {
-					sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
-						"Please send a number")
 					continue
 				}
 				if userPhotoCount < 1 {
@@ -134,6 +132,7 @@ func main() {
 						"Please send a number greater than 0")
 					continue
 				}
+
 				sendRandomPhoto(userPhotoCount, &update, bot)
 			}
 		}
