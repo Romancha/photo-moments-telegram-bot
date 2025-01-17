@@ -47,7 +47,7 @@ func main() {
 
 	c := cron.New()
 	_, err = c.AddFunc(cfg.cronSpec, func() {
-		sendRandomPhoto(-1, nil, bot)
+		sendRandomPhoto(cfg.photoCount, nil, bot)
 	})
 	if err != nil {
 		panic("Failed to add cron job.")

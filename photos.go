@@ -11,6 +11,11 @@ import (
 )
 
 func getRandomPhotos(count int) []string {
+	if count < 1 {
+		log.Println("Photo count is less than 1, setting to 1")
+		count = 1
+	}
+
 	if count > 10 {
 		log.Println("Max photo count in mediaGroup is 10, setting to 10")
 		count = 10
