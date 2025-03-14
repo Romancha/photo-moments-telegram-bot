@@ -16,6 +16,13 @@
 
 # Go workspace file
 go.work
+go.work.sum
+
+photo_moments.db
+
+.DS_Store
 
 *.iml
 .idea
+
+.env
