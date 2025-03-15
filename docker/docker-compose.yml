@@ -5,7 +5,14 @@ services:
       - /pathToYouPhotoLibrary/:/photoLibrary/
       - /pathToYouDbStorage/:/dbStorage/
     environment:
-      - FM_ALLOWED_USERS_ID=userId;userId2
-      - FM_CHAT_ID=chatId
-      - FM_TG_BOT_TOKEN=botToken
-      - FM_DB_PATH=/dbStorage/photo-moments.db
+      - FM_ALLOWED_USERS_ID=userId;userId2  # Telegram user IDs that can use the bot
+      - FM_CHAT_ID=chatId                   # Chat ID where the bot will send messages
+      - FM_TG_BOT_TOKEN=botToken            # Telegram bot token from @BotFather
+      - FM_DB_PATH=/dbStorage/photo-moments.db  # Path to the database file
+      # Optional parameters
+      # - FM_PHOTO_COUNT=5                  # Number of photos to send on schedule (default: 5)
+      # - FM_SEND_PHOTO_CRON_SPEC=0 10 * * * # Cron schedule for sending photos (default: daily at 10:00)
+      # - FM_SEND_PHOTOS_BY_NUMBER=true     # Allow sending photos by number (default: true)
+      # - FM_MEMORIES_CRON_SPEC=0 12 * * *  # Cron schedule for sending memories photos (default: daily at 12:00)
+      # - FM_MEMORIES_PHOTO_COUNT=5         # Total number of photos to send for memories (default: 5)
+      # - FM_REINDEX_CRON_SPEC=0 0 * * 0    # Cron schedule for automatic reindexing (default: weekly on Sunday at 00:00)

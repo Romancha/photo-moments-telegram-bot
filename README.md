@@ -22,6 +22,9 @@ enabling you to fondly reminisce about cherished memories.
 - **Random Photos on Schedule**: Fetch random photos from your library using [Cron](https://en.wikipedia.org/wiki/Cron).
 - **On-Demand Random Photos**: Request random photos by sending a message with a number or using the `/photo [count]`
   command. Maximum 10 photos per request.
+- **Memories from the Past**: View photos taken on this day in previous years with `/memories [years]` or `/today`.
+- **Automated Memories**: Receive photos taken on this day in previous years automatically on schedule.
+- **Automatic Reindexing**: Weekly differential reindexing to keep the photo database up-to-date.
 - **Broad Image Format Support**: `jpg`, `png`, `gif`, `webp`, `heic`.
 - **Automatic Compression** of large photos (>6 MB) before sending.
 - **Detailed Photo Info**: EXIF-based details (path, date, camera model, GPS location) via `/info`.
@@ -61,23 +64,35 @@ library [libvips](https://www.libvips.org/).
 
 ## Configuration
 
-| Param                    | Description                                                                                                |
-|--------------------------|------------------------------------------------------------------------------------------------------------|
-| FM_TG_BOT_TOKEN          | Telegram bot token, take from [@BotFather](https://t.me/BotFather)                                         |
-| FM_CHAT_ID               | Chat ID where the bot will send messages. [@userinfobot](https://t.me/userinfobot) Can help to get chat id |
-| FM_ALLOWED_USERS_ID      | Telegram user IDs that can use the bot. You can specify multiple id with separator ``;``                   |
-| FM_PHOTO_PATH            | Path to the photo library folder                                                                           |
-| FM_DB_PATH               | Path to the db file. Default ``photo_moments.db``.                                                         |
-| FM_PHOTO_COUNT           | The number of photos that the bot will send according to the schedule. Default ``5``, maximum ``10``       |
-| FM_SEND_PHOTOS_BY_NUMBER | Send photos by number. Default ``true``                                                                    |
-| FM_SEND_PHOTO_CRON_SPEC  | [Cron](https://en.wikipedia.org/wiki/Cron) to send random photos. Default ``0 10 * * *``                   |
+| Param                    | Description                                                                                                                            |
+|--------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| FM_TG_BOT_TOKEN          | Telegram bot token, take from [@BotFather](https://t.me/BotFather)                                                                     |
+| FM_CHAT_ID               | Chat ID where the bot will send messages. [@userinfobot](https://t.me/userinfobot) Can help to get chat id                             |
+| FM_ALLOWED_USERS_ID      | Telegram user IDs that can use the bot. You can specify multiple id with separator ``;``                                               |
+| FM_PHOTO_PATH            | Path to the photo library folder                                                                                                       |
+| FM_DB_PATH               | Path to the db file. Default ``photo_moments.db``.                                                                                     |
+| FM_PHOTO_COUNT           | The number of photos that the bot will send according to the schedule. Default ``5``, maximum ``10``                                   |
+| FM_SEND_PHOTOS_BY_NUMBER | Send photos by number. Default ``true``                                                                                                |
+| FM_SEND_PHOTO_CRON_SPEC  | [Cron](https://en.wikipedia.org/wiki/Cron) to send random photos. Default ``0 10 * * *``                                               |
+| FM_MEMORIES_CRON_SPEC    | [Cron](https://en.wikipedia.org/wiki/Cron) to send photos from this day in different years. Default ``0 12 * * *``                     |
+| FM_MEMORIES_PHOTO_COUNT  | Total number of photos to send for memories across all years. Default ``5``                                                            |
+| FM_MEMORIES_YEARS_AGO    | Years for which to send memories. You can specify multiple years with separator ``;``. Default ``1;2;3;5;7;10``                        |
+| FM_REINDEX_CRON_SPEC     | [Cron](https://en.wikipedia.org/wiki/Cron) for automatic differential reindexing. Default ``0 0 * * 0`` (weekly on Sunday at midnight) |
 
 ## Commands
 
 | Command        | Description                                                                                                |
 |----------------|------------------------------------------------------------------------------------------------------------|
-| [number]       | Send random photo from library. ``number`` - count of photos                                               |
-| /photo [count] | Send random photo from library. ``count`` - count of photos                                                |
+| /start         | Start interacting with the bot                                                                             |
+| /help          | Show help information                                                                                      |
+| /random        | Get a random photo from the archive                                                                        |
+| /random N      | Get N random photos from the archive                                                                       |
+| /memories      | Get photos taken on this day one year ago                                                                  |
+| /memories N    | Get photos taken on this day N years ago                                                                   |
+| /today         | Get photos taken on this day across different years                                                        |
+| /indexing      | Show the current status of photo metadata indexing                                                         |
+| /reindex full  | Start full reindexing of photos (clear and recreate indices)                                               |
+| /reindex diff  | Start differential indexing (only new and modified files)                                                  |
 | /info [number] | Show info about photo - path, time, camera, GPS location. ``number`` - sequence number of last sent photos |
 | /info          | If replying to a specific photo, shows info about that exact photo                                         |
 

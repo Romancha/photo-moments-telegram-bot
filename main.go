@@ -1,17 +1,30 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	tgbotapi "github.com/OvyFlash/telegram-bot-api"
-	"github.com/robfig/cron/v3"
 	"log"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
+	"time"
+
+	tgbotapi "github.com/OvyFlash/telegram-bot-api"
+	"github.com/robfig/cron/v3"
+	bolt "go.etcd.io/bbolt"
 )
 
 var tempProcessedPhotoPath = os.TempDir() + "/" + "compressed"
 var cfg = getConfig()
 var lastPhotos []string
+
+type PhotoRequestType int
+
+const (
+	RequestTypeToday    PhotoRequestType = iota // Photos taken on this day in different years
+	RequestTypeMemories                         // Photos taken a specific number of years ago
+)
 
 func main() {
 	log.Println("Starting bot with config:", cfg)
@@ -27,6 +40,15 @@ func main() {
 	// 2) Initialize bbolt DB
 	initDB(cfg.dbPath)
 	defer db.Close()
+
+	// 3) Initialize photo metadata buckets
+	err := InitPhotoMetadata()
+	if err != nil {
+		log.Printf("Failed to initialize photo metadata: %v", err)
+	} else {
+		// 4) Start background indexing with 2 workers
+		StartBackgroundIndexing(cfg.photoPath, 2)
+	}
 
 	bot, err := tgbotapi.NewBotAPI(cfg.botToken)
 	if err != nil {
@@ -52,6 +74,27 @@ func main() {
 	if err != nil {
 		panic("Failed to add cron job.")
 	}
+
+	// Add cron job for sending photos from this day in different years
+	_, err = c.AddFunc(cfg.memoriesCronSpec, func() {
+		sendMemoryPhotos(RequestTypeToday, 0, nil, bot)
+	})
+	if err != nil {
+		panic("Failed to add memories cron job.")
+	}
+
+	// Add cron job for automatic reindexing
+	_, err = c.AddFunc(cfg.reindexCronSpec, func() {
+		log.Println("Starting scheduled differential reindexing")
+		err := StartDifferentialIndexing(cfg.photoPath, 2)
+		if err != nil {
+			log.Printf("Error during scheduled reindexing: %v", err)
+		}
+	})
+	if err != nil {
+		panic("Failed to add reindexing cron job.")
+	}
+
 	c.Start()
 
 	for update := range updates {
@@ -116,6 +159,126 @@ func main() {
 					sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
 						"Please specify a photo number or reply to a specific photo with /info.")
 
+				case "memories":
+					// Processing command to get photos from the past
+					yearsArg := update.Message.CommandArguments()
+					var yearsAgo = 1 // Default: 1 year ago
+					var err error
+
+					if yearsArg != "" {
+						yearsAgo, err = strconv.Atoi(yearsArg)
+						if err != nil || yearsAgo < 1 {
+							sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
+								"Please specify a valid number of years, for example: /memories 2")
+							break
+						}
+					}
+
+					sendMemoryPhotos(RequestTypeMemories, yearsAgo, &update, bot)
+
+				case "today":
+					// Processing command to get photos taken on this day in different years
+					sendMemoryPhotos(RequestTypeToday, 0, &update, bot)
+
+				case "indexing":
+					// Show indexing status
+					active, indexed, total, err := GetIndexingStatus()
+					if err != nil {
+						sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
+							fmt.Sprintf("Error getting indexing status: %v", err))
+						break
+					}
+
+					// Get last indexing time
+					lastIndexed, err := GetLastIndexedTime()
+					var lastIndexedStr string
+					if err == nil && !lastIndexed.IsZero() {
+						lastIndexedStr = lastIndexed.Format("02.01.2006 15:04:05")
+					} else {
+						lastIndexedStr = "unknown"
+					}
+
+					// Get last indexing duration
+					duration, err := GetIndexingDuration()
+					var durationStr string
+					if err == nil && duration > 0 {
+						durationStr = formatDuration(duration)
+					} else {
+						durationStr = "unknown"
+					}
+
+					var statusMsg string
+					if active {
+						statusMsg = fmt.Sprintf("Indexing is active. Indexed %d of %d photos (%.1f%%)",
+							indexed, total, float64(indexed)/float64(total)*100)
+					} else {
+						statusMsg = fmt.Sprintf("Indexing completed. Indexed %d of %d photos (%.1f%%)\n"+
+							"Last indexing: %s\n"+
+							"Duration: %s",
+							indexed, total, float64(indexed)/float64(total)*100,
+							lastIndexedStr, durationStr)
+					}
+
+					sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot, statusMsg)
+
+				case "reindex":
+					// Start indexing with parameters
+					args := strings.Fields(update.Message.Text)
+					if len(args) < 2 {
+						sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
+							"Usage: /reindex [full|diff]\n"+
+								"full - full reindexing (clear and recreate indexes)\n"+
+								"diff - differential indexing (only new and modified files)")
+						break
+					}
+
+					// Check if indexing is already active
+					active, _, _, err := GetIndexingStatus()
+					if err != nil {
+						sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
+							fmt.Sprintf("Error checking indexing status: %v", err))
+						break
+					}
+
+					if active {
+						sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
+							"Indexing is already active, please wait for it to complete")
+						break
+					}
+
+					// Determine indexing type
+					indexType := strings.ToLower(args[1])
+					var responseMsg string
+
+					switch indexType {
+					case "full":
+						// Start full reindexing
+						err = ForceReindexing(cfg.photoPath, 2)
+						if err != nil {
+							sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
+								fmt.Sprintf("Error starting full reindexing: %v", err))
+							break
+						}
+						responseMsg = "Full photo reindexing started"
+
+					case "diff":
+						// Start differential indexing
+						err = StartDifferentialIndexing(cfg.photoPath, 2)
+						if err != nil {
+							sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
+								fmt.Sprintf("Error starting differential indexing: %v", err))
+							break
+						}
+						responseMsg = "Differential photo indexing started (only new and modified files)"
+
+					default:
+						sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
+							"Unknown indexing type. Use 'full' or 'diff'")
+						break
+					}
+
+					sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot, responseMsg)
+
 				default:
 					continue
 				}
@@ -141,6 +304,254 @@ func main() {
 
 func sendRandomPhoto(count int, update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
 	sendRandomPhotoMessage(count, update, bot)
+	clearCompressedPhotos()
+}
+
+// sendMemoryPhotos sends photos from the past
+// requestType - request type (today or specific number of years ago)
+// yearsAgo - number of years ago (used only for RequestTypeMemories)
+func sendMemoryPhotos(requestType PhotoRequestType, yearsAgo int, update *tgbotapi.Update, bot *tgbotapi.BotAPI) {
+	var chatId int64
+	var replyMessageId *int
+	if update != nil {
+		chatId = update.Message.Chat.ID
+		replyMessageId = &update.Message.MessageID
+	} else {
+		chatId = cfg.chatId
+		// Create a dummy message ID for reply
+		fakeId := 0
+		replyMessageId = &fakeId
+	}
+
+	// Form message depending on request type
+	var searchMessage string
+	if requestType == RequestTypeToday {
+		searchMessage = "🗓 Looking for photos taken on this day in different years..."
+	} else {
+		searchMessage = fmt.Sprintf("🕰 Looking for photos taken %d years ago on this day...", yearsAgo)
+	}
+	sendSafeReplyText(chatId, *replyMessageId, bot, searchMessage)
+
+	// Get photos depending on request type
+	var photos []string
+	var err error
+	if requestType == RequestTypeToday {
+		photos, err = GetPhotosFromThisDay(100) // Get more photos to have enough for selection
+	} else {
+		photos, err = GetPhotosFromPast(yearsAgo, 30) // Increase limit as we'll group by years
+	}
+
+	if err != nil {
+		sendSafeReplyText(chatId, *replyMessageId, bot, fmt.Sprintf("Error searching for photos: %v", err))
+		return
+	}
+
+	if len(photos) == 0 {
+		var notFoundMessage string
+		if requestType == RequestTypeToday {
+			notFoundMessage = "No photos found taken on this day"
+		} else {
+			notFoundMessage = fmt.Sprintf("No photos found taken %d years ago on this day", yearsAgo)
+		}
+		sendSafeReplyText(chatId, *replyMessageId, bot, notFoundMessage)
+		return
+	}
+
+	// Group photos by year
+	photosByYear := make(map[int][]string)
+
+	for _, photoPath := range photos {
+		// Get photo metadata to determine the year
+		var metadata *PhotoMetadata
+		err := db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(bucketPhotoMetadata))
+			if b == nil {
+				return fmt.Errorf("bucket %s not found", bucketPhotoMetadata)
+			}
+
+			metadataBytes := b.Get([]byte(photoPath))
+			if metadataBytes == nil {
+				return fmt.Errorf("metadata not found for %s", photoPath)
+			}
+
+			var m PhotoMetadata
+			err := json.Unmarshal(metadataBytes, &m)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling metadata: %v", err)
+			}
+
+			metadata = &m
+			return nil
+		})
+
+		if err != nil {
+			log.Printf("Error getting metadata for %s: %v", photoPath, err)
+			continue
+		}
+
+		// Add photo to the corresponding year group
+		photosByYear[metadata.Year] = append(photosByYear[metadata.Year], photoPath)
+	}
+
+	// Sort years for sending from oldest to newest
+	var years []int
+	for year := range photosByYear {
+		years = append(years, year)
+	}
+	sort.Ints(years)
+
+	// Flag to track the first message (which will have sound)
+	isFirstMessage := true
+
+	// Determine total photo count limit
+	var totalPhotoLimit int
+	if requestType == RequestTypeToday && update == nil {
+		// For cron job with today photos, use the configured limit
+		totalPhotoLimit = cfg.memoriesPhotoCount
+	} else if requestType == RequestTypeToday {
+		// For manual /today command, use default limit
+		totalPhotoLimit = 20
+	} else {
+		// For memories, use default limit
+		totalPhotoLimit = 20
+	}
+
+	// Calculate how many photos to take from each year
+	// to not exceed the total limit
+	photosPerYear := make(map[int]int)
+	remainingPhotos := totalPhotoLimit
+
+	// First pass: ensure at least one photo per year if possible
+	for _, year := range years {
+		if len(photosByYear[year]) > 0 && remainingPhotos > 0 {
+			photosPerYear[year] = 1
+			remainingPhotos--
+		}
+	}
+
+	// Second pass: distribute remaining photos proportionally
+	if remainingPhotos > 0 && len(years) > 0 {
+		// Calculate total available photos across all years
+		totalAvailable := 0
+		for _, year := range years {
+			// Count available photos beyond the first one we already allocated
+			if len(photosByYear[year]) > photosPerYear[year] {
+				totalAvailable += len(photosByYear[year]) - photosPerYear[year]
+			}
+		}
+
+		// Distribute remaining photos proportionally
+		for _, year := range years {
+			available := len(photosByYear[year]) - photosPerYear[year]
+			if available <= 0 {
+				continue
+			}
+
+			// Calculate fair share based on proportion of available photos
+			var share int
+			if totalAvailable > 0 {
+				share = int(float64(available) / float64(totalAvailable) * float64(remainingPhotos))
+			}
+
+			// Ensure we don't take more than available
+			if share > available {
+				share = available
+			}
+
+			photosPerYear[year] += share
+			remainingPhotos -= share
+
+			// If we can't distribute proportionally, just break
+			if remainingPhotos <= 0 {
+				break
+			}
+		}
+	}
+
+	// Third pass: distribute any remaining photos
+	if remainingPhotos > 0 {
+		for _, year := range years {
+			available := len(photosByYear[year]) - photosPerYear[year]
+			if available <= 0 {
+				continue
+			}
+
+			// Take one more photo from this year
+			photosPerYear[year]++
+			remainingPhotos--
+
+			if remainingPhotos <= 0 {
+				break
+			}
+		}
+	}
+
+	// Send photos by groups for each year
+	for _, year := range years {
+		yearPhotos := photosByYear[year]
+
+		// Skip years with no allocated photos
+		if photosPerYear[year] <= 0 {
+			continue
+		}
+
+		// Limit the number of photos for this year based on our calculation
+		if len(yearPhotos) > photosPerYear[year] {
+			// Shuffle and take the calculated number
+			shuffleStrings(yearPhotos)
+			yearPhotos = yearPhotos[:photosPerYear[year]]
+		}
+
+		// Process photos for this year
+		var processedPhotos []string
+		for _, photo := range yearPhotos {
+			compressedPhoto := processPhoto(photo)
+			if compressedPhoto != nil {
+				processedPhotos = append(processedPhotos, *compressedPhoto)
+			}
+		}
+
+		if len(processedPhotos) == 0 {
+			continue // Skip if there are no processed photos for this year
+		}
+
+		// Send photos for this year
+		var mediaGroup []interface{}
+		for i, path := range processedPhotos {
+			photo := tgbotapi.NewInputMediaPhoto(tgbotapi.FilePath(path))
+
+			// Set caption only for the first photo in the group
+			if i == 0 {
+				now := time.Now()
+				var caption string
+				if requestType == RequestTypeToday {
+					caption = fmt.Sprintf("📅 Photos taken on %d.%d.%d", now.Day(), now.Month(), year)
+				} else {
+					pastDate := now.AddDate(-yearsAgo, 0, 0)
+					caption = fmt.Sprintf("📅 %d years ago (%s) - year %d", yearsAgo, pastDate.Format("02.01.2006"), year)
+				}
+				photo.Caption = caption
+			}
+
+			mediaGroup = append(mediaGroup, photo)
+		}
+
+		mediaMsg := tgbotapi.NewMediaGroup(chatId, mediaGroup)
+		mediaMsg.ReplyParameters.MessageID = *replyMessageId
+
+		// Set DisableNotification flag for all messages except the first one
+		if !isFirstMessage {
+			mediaMsg.DisableNotification = true
+		}
+		isFirstMessage = false
+
+		_, err = bot.SendMediaGroup(mediaMsg)
+		if err != nil {
+			log.Println(err)
+			sendSafeReplyText(chatId, *replyMessageId, bot, fmt.Sprintf("Error sending photos for year %d: %v", year, err))
+		}
+	}
+
 	clearCompressedPhotos()
 }
 
@@ -195,4 +606,18 @@ func handleLastSendingInfo(update tgbotapi.Update, photoIndex int, bot *tgbotapi
 	sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot, header)
 
 	sendPhotoDescriptionMessage(update.Message.Chat.ID, update.Message.MessageID, bot, p.Path)
+}
+
+// formatDuration formats duration in seconds to a readable form
+func formatDuration(seconds float64) string {
+	hours := int(seconds) / 3600
+	minutes := (int(seconds) % 3600) / 60
+	secs := int(seconds) % 60
+
+	if hours > 0 {
+		return fmt.Sprintf("%d h %d min %d sec", hours, minutes, secs)
+	} else if minutes > 0 {
+		return fmt.Sprintf("%d min %d sec", minutes, secs)
+	}
+	return fmt.Sprintf("%d sec", secs)
 }

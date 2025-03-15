@@ -16,6 +16,9 @@ var keyDbPath = "FM_DB_PATH"
 var keyCronSpec = "FM_SEND_PHOTO_CRON_SPEC"
 var keySendPhotosByNumber = "FM_SEND_PHOTOS_BY_NUMBER"
 var keyDebug = "FM_DEBUG"
+var keyMemoriesCronSpec = "FM_MEMORIES_CRON_SPEC"
+var keyMemoriesPhotoCount = "FM_MEMORIES_PHOTO_COUNT"
+var keyReindexCronSpec = "FM_REINDEX_CRON_SPEC"
 
 type Config struct {
 	chatId             int64
@@ -27,6 +30,9 @@ type Config struct {
 	cronSpec           string
 	sendPhotosByNumber bool
 	debug              bool
+	memoriesCronSpec   string
+	memoriesPhotoCount int
+	reindexCronSpec    string // Cron schedule for automatic reindexing
 }
 
 // TODO: rewrite configs with go-flags
@@ -89,6 +95,29 @@ func getConfig() Config {
 		debug = debugEnv
 	}
 
+	// Settings for sending memories
+	memoriesCronSpec := "0 12 * * *" // Default at 12:00 every day
+	overrideMemoriesCronSpec := os.Getenv(keyMemoriesCronSpec)
+	if overrideMemoriesCronSpec != "" {
+		memoriesCronSpec = overrideMemoriesCronSpec
+	}
+
+	memoriesPhotoCount := 5 // Default 5 photos
+	overrideMemoriesPhotoCount := os.Getenv(keyMemoriesPhotoCount)
+	if overrideMemoriesPhotoCount != "" {
+		parsedMemoriesCount, err := strconv.Atoi(overrideMemoriesPhotoCount)
+		if err == nil && parsedMemoriesCount > 0 {
+			memoriesPhotoCount = parsedMemoriesCount
+		}
+	}
+
+	// Settings for automatic reindexing
+	reindexCronSpec := "0 0 * * 0" // Default at midnight every Sunday
+	overrideReindexCronSpec := os.Getenv(keyReindexCronSpec)
+	if overrideReindexCronSpec != "" {
+		reindexCronSpec = overrideReindexCronSpec
+	}
+
 	return Config{
 		chatId:             int64(chatId),
 		allowedUserIds:     allowedUserIds,
@@ -99,5 +128,8 @@ func getConfig() Config {
 		cronSpec:           cronSpec,
 		sendPhotosByNumber: sendPhotosByNumber,
 		debug:              debug,
+		memoriesCronSpec:   memoriesCronSpec,
+		memoriesPhotoCount: memoriesPhotoCount,
+		reindexCronSpec:    reindexCronSpec,
 	}
 }
