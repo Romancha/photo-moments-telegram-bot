@@ -1017,3 +1017,36 @@ func GetIndexingDuration() (float64, error) {
 
 	return duration, nil
 }
+
+// ResetIndexingFlagIfStuck checks if indexing flag is stuck and resets it
+func ResetIndexingFlagIfStuck() error {
+	// Get indexing status
+	active, _, _, err := GetIndexingStatus()
+	if err != nil {
+		return fmt.Errorf("error getting indexing status: %v", err)
+	}
+
+	// If indexing is active, it's likely that the previous process was interrupted
+	// (e.g., container was stopped), so we should reset the flag
+	if active {
+		log.Println("Detected active indexing flag at startup. Resetting it as the previous process was likely interrupted.")
+
+		// Reset indexing flag
+		err = db.Update(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(bucketIndexingStats))
+			if b == nil {
+				return fmt.Errorf("bucket %s not found", bucketIndexingStats)
+			}
+
+			return b.Put([]byte(keyIndexingActive), []byte("false"))
+		})
+
+		if err != nil {
+			return fmt.Errorf("error resetting indexing flag: %v", err)
+		}
+
+		log.Println("Indexing flag reset successfully")
+	}
+
+	return nil
+}

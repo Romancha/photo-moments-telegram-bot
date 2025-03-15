@@ -46,6 +46,12 @@ func main() {
 	if err != nil {
 		log.Printf("Failed to initialize photo metadata: %v", err)
 	} else {
+		// Check and reset indexing flag if stuck
+		err = ResetIndexingFlagIfStuck()
+		if err != nil {
+			log.Printf("Error checking indexing flag: %v", err)
+		}
+
 		// 4) Start background indexing with 2 workers
 		StartBackgroundIndexing(cfg.photoPath, 2)
 	}
@@ -220,13 +226,48 @@ func main() {
 							ticker := time.NewTicker(3 * time.Second) // Update every 3 seconds
 							defer ticker.Stop()
 
+							// Add counter to track changes in indexing status
+							lastIndexed := 0
+							unchangedCount := 0
+							maxUnchangedCount := 10 // Maximum number of updates without changes (30 seconds)
+
 							// Keep updating the status message while indexing is active
 							for range ticker.C {
 								// Check if indexing is still active
-								active, _, _, err := GetIndexingStatus()
+								active, indexed, _, err := GetIndexingStatus()
 								if err != nil {
 									log.Printf("Error checking indexing status: %v", err)
 									return
+								}
+
+								// Check if the number of indexed photos has changed
+								if indexed == lastIndexed {
+									unchangedCount++
+								} else {
+									unchangedCount = 0
+									lastIndexed = indexed
+								}
+
+								// If status hasn't changed for too long, consider indexing as "stuck"
+								if unchangedCount >= maxUnchangedCount {
+									log.Printf("Indexing status hasn't changed for %d seconds, stopping updates",
+										3*maxUnchangedCount)
+
+									// Reset indexing flag
+									err = db.Update(func(tx *bolt.Tx) error {
+										b := tx.Bucket([]byte(bucketIndexingStats))
+										if b == nil {
+											return fmt.Errorf("bucket %s not found", bucketIndexingStats)
+										}
+										return b.Put([]byte(keyIndexingActive), []byte("false"))
+									})
+
+									if err != nil {
+										log.Printf("Error resetting indexing flag: %v", err)
+									} else {
+										log.Println("Reset stuck indexing flag")
+										active = false
+									}
 								}
 
 								// Update the status message
