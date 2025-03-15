@@ -200,44 +200,57 @@ func main() {
 
 				case "indexing":
 					// Show indexing status
-					active, indexed, total, err := GetIndexingStatus()
+					active, _, _, err := GetIndexingStatus()
 					if err != nil {
 						sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot,
 							fmt.Sprintf("Error getting indexing status: %v", err))
 						break
 					}
 
-					// Get last indexing time
-					lastIndexed, err := GetLastIndexedTime()
-					var lastIndexedStr string
-					if err == nil && !lastIndexed.IsZero() {
-						lastIndexedStr = lastIndexed.Format("02.01.2006 15:04:05")
-					} else {
-						lastIndexedStr = "unknown"
+					// Send initial status message
+					statusMsgID, err := sendIndexingStatusMessage(update.Message.Chat.ID, update.Message.MessageID, bot)
+					if err != nil {
+						log.Printf("Error sending indexing status: %v", err)
+						break
 					}
 
-					// Get last indexing duration
-					duration, err := GetIndexingDuration()
-					var durationStr string
-					if err == nil && duration > 0 {
-						durationStr = formatDuration(duration)
-					} else {
-						durationStr = "unknown"
-					}
-
-					var statusMsg string
+					// If indexing is active, start a goroutine to update the status message
 					if active {
-						statusMsg = fmt.Sprintf("Indexing is active. Indexed %d of %d photos (%.1f%%)",
-							indexed, total, float64(indexed)/float64(total)*100)
-					} else {
-						statusMsg = fmt.Sprintf("Indexing completed. Indexed %d of %d photos (%.1f%%)\n"+
-							"Last indexing: %s\n"+
-							"Duration: %s",
-							indexed, total, float64(indexed)/float64(total)*100,
-							lastIndexedStr, durationStr)
-					}
+						go func(chatID int64, messageID int) {
+							ticker := time.NewTicker(3 * time.Second) // Update every 3 seconds
+							defer ticker.Stop()
 
-					sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot, statusMsg)
+							// Keep updating the status message while indexing is active
+							for range ticker.C {
+								// Check if indexing is still active
+								active, _, _, err := GetIndexingStatus()
+								if err != nil {
+									log.Printf("Error checking indexing status: %v", err)
+									return
+								}
+
+								// Update the status message
+								err = updateIndexingStatusMessage(chatID, messageID, bot)
+								if err != nil {
+									log.Printf("Error updating indexing status: %v", err)
+									return
+								}
+
+								// If indexing is no longer active, update one last time and stop
+								if !active {
+									// Wait a moment for final stats to be updated
+									time.Sleep(1 * time.Second)
+
+									// Final update with completed status
+									err = updateIndexingStatusMessage(chatID, messageID, bot)
+									if err != nil {
+										log.Printf("Error updating final indexing status: %v", err)
+									}
+									return
+								}
+							}
+						}(update.Message.Chat.ID, statusMsgID)
+					}
 
 				case "reindex":
 					// Start indexing with parameters
@@ -670,18 +683,4 @@ func handleLastSendingInfo(update tgbotapi.Update, photoIndex int, bot *tgbotapi
 	sendSafeReplyText(update.Message.Chat.ID, update.Message.MessageID, bot, header)
 
 	sendPhotoDescriptionMessage(update.Message.Chat.ID, update.Message.MessageID, bot, p.Path)
-}
-
-// formatDuration formats duration in seconds to a readable form
-func formatDuration(seconds float64) string {
-	hours := int(seconds) / 3600
-	minutes := (int(seconds) % 3600) / 60
-	secs := int(seconds) % 60
-
-	if hours > 0 {
-		return fmt.Sprintf("%d h %d min %d sec", hours, minutes, secs)
-	} else if minutes > 0 {
-		return fmt.Sprintf("%d min %d sec", minutes, secs)
-	}
-	return fmt.Sprintf("%d sec", secs)
 }

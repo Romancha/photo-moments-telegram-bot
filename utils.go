@@ -96,3 +96,17 @@ func parseFraction(fractionStr string) (float64, error) {
 
 	return numerator / denominator, nil
 }
+
+// formatDuration formats duration in seconds to a readable form
+func formatDuration(seconds float64) string {
+	hours := int(seconds) / 3600
+	minutes := (int(seconds) % 3600) / 60
+	secs := int(seconds) % 60
+
+	if hours > 0 {
+		return fmt.Sprintf("%d h %d min %d sec", hours, minutes, secs)
+	} else if minutes > 0 {
+		return fmt.Sprintf("%d min %d sec", minutes, secs)
+	}
+	return fmt.Sprintf("%d sec", secs)
+}
