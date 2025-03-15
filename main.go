@@ -97,6 +97,24 @@ func main() {
 
 	c.Start()
 
+	// Set up commands for Telegram menu
+	commands := []tgbotapi.BotCommand{
+		{Command: "start", Description: "Start interaction with the bot"},
+		{Command: "photo", Description: "Send random photos from your library"},
+		{Command: "memories", Description: "Photos from this day 1 year ago (use /memories N for N years ago)"},
+		{Command: "today", Description: "View photos taken on this day across different years"},
+		{Command: "indexing", Description: "Show photo indexing status"},
+		{Command: "reindex", Description: "Start photo reindexing (full/diff)"},
+		{Command: "info", Description: "Show photo info (reply to photo or use /info N for Nth photo)"},
+	}
+
+	// Set bot commands
+	commandConfig := tgbotapi.NewSetMyCommands(commands...)
+	_, err = bot.Request(commandConfig)
+	if err != nil {
+		log.Printf("Error setting bot commands: %v", err)
+	}
+
 	for update := range updates {
 		if update.Message != nil {
 			log.Printf("New message: [%s]: %d - %s", update.Message.From.UserName, update.Message.From.ID,
