@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -847,14 +848,21 @@ func GetPhotosFromPast(yearsAgo int, limit int) ([]string, error) {
 		return nil, err
 	}
 
-	// Limit photo count
-	if len(photos) > limit {
-		// Shuffle photos and take first limit
-		shuffleStrings(photos)
-		photos = photos[:limit]
+	// Filter similar photos
+	filteredPhotos, err := FilterSimilarPhotos(photos)
+	if err != nil {
+		log.Printf("Error filtering similar photos: %v", err)
+		filteredPhotos = photos // Fallback to original photos if filtering fails
 	}
 
-	return photos, nil
+	// Limit photo count
+	if len(filteredPhotos) > limit {
+		// Shuffle photos and take first limit
+		shuffleStrings(filteredPhotos)
+		filteredPhotos = filteredPhotos[:limit]
+	}
+
+	return filteredPhotos, nil
 }
 
 // GetPhotosFromThisDay returns photos taken on this day in different years
@@ -893,14 +901,21 @@ func GetPhotosFromThisDay(limit int) ([]string, error) {
 		return nil, err
 	}
 
-	// Limit photo count
-	if len(photos) > limit {
-		// Shuffle photos and take first limit
-		shuffleStrings(photos)
-		photos = photos[:limit]
+	// Filter similar photos
+	filteredPhotos, err := FilterSimilarPhotos(photos)
+	if err != nil {
+		log.Printf("Error filtering similar photos: %v", err)
+		filteredPhotos = photos // Fallback to original photos if filtering fails
 	}
 
-	return photos, nil
+	// Limit photo count
+	if len(filteredPhotos) > limit {
+		// Shuffle photos and take first limit
+		shuffleStrings(filteredPhotos)
+		filteredPhotos = filteredPhotos[:limit]
+	}
+
+	return filteredPhotos, nil
 }
 
 // GetIndexingStatus returns indexing status
@@ -1031,22 +1046,133 @@ func ResetIndexingFlagIfStuck() error {
 	if active {
 		log.Println("Detected active indexing flag at startup. Resetting it as the previous process was likely interrupted.")
 
-		// Reset indexing flag
+		// Reset indexing state completely
 		err = db.Update(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte(bucketIndexingStats))
 			if b == nil {
 				return fmt.Errorf("bucket %s not found", bucketIndexingStats)
 			}
 
-			return b.Put([]byte(keyIndexingActive), []byte("false"))
+			// Reset indexing active flag
+			err := b.Put([]byte(keyIndexingActive), []byte("false"))
+			if err != nil {
+				return err
+			}
+
+			// Reset indexed count
+			err = b.Put([]byte(keyIndexedCount), []byte("0"))
+			if err != nil {
+				return err
+			}
+
+			// Update last indexing time to current time
+			err = b.Put([]byte(keyLastIndexedTime), []byte(time.Now().Format(time.RFC3339)))
+			if err != nil {
+				return err
+			}
+
+			// Set indexing duration to 0
+			err = b.Put([]byte(keyIndexingDuration), []byte("0"))
+			if err != nil {
+				return err
+			}
+
+			return nil
 		})
 
 		if err != nil {
-			return fmt.Errorf("error resetting indexing flag: %v", err)
+			return fmt.Errorf("error resetting indexing state: %v", err)
 		}
 
-		log.Println("Indexing flag reset successfully")
+		log.Println("Indexing state reset successfully")
 	}
 
 	return nil
+}
+
+// FilterSimilarPhotos filters out similar photos taken within a short time interval
+// It returns a filtered list of photos with at least minTimeIntervalMinutes minutes between them
+func FilterSimilarPhotos(photos []string) ([]string, error) {
+	if len(photos) <= 1 {
+		return photos, nil
+	}
+	minTimeIntervalMinutes := 1
+
+	// Create a map to store photo metadata by path
+	photoMetadata := make(map[string]*PhotoMetadata)
+
+	// Get metadata for all photos
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucketPhotoMetadata))
+		if b == nil {
+			return fmt.Errorf("bucket %s not found", bucketPhotoMetadata)
+		}
+
+		for _, photoPath := range photos {
+			metadataBytes := b.Get([]byte(photoPath))
+			if metadataBytes == nil {
+				log.Printf("Metadata not found for %s, skipping", photoPath)
+				continue
+			}
+
+			var metadata PhotoMetadata
+			err := json.Unmarshal(metadataBytes, &metadata)
+			if err != nil {
+				log.Printf("Error unmarshaling metadata for %s: %v", photoPath, err)
+				continue
+			}
+
+			photoMetadata[photoPath] = &metadata
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a slice of photos with metadata
+	type PhotoWithMetadata struct {
+		Path     string
+		Metadata *PhotoMetadata
+	}
+
+	photosWithMetadata := make([]PhotoWithMetadata, 0, len(photoMetadata))
+	for path, metadata := range photoMetadata {
+		photosWithMetadata = append(photosWithMetadata, PhotoWithMetadata{
+			Path:     path,
+			Metadata: metadata,
+		})
+	}
+
+	// Sort photos by taken date
+	sort.Slice(photosWithMetadata, func(i, j int) bool {
+		return photosWithMetadata[i].Metadata.TakenDate.Before(photosWithMetadata[j].Metadata.TakenDate)
+	})
+
+	// Filter photos by time interval
+	var filteredPhotos []string
+	if len(photosWithMetadata) > 0 {
+		// Always include the first photo
+		filteredPhotos = append(filteredPhotos, photosWithMetadata[0].Path)
+		lastIncludedTime := photosWithMetadata[0].Metadata.TakenDate
+
+		// Check each subsequent photo
+		for i := 1; i < len(photosWithMetadata); i++ {
+			currentPhoto := photosWithMetadata[i]
+			timeDiff := currentPhoto.Metadata.TakenDate.Sub(lastIncludedTime)
+
+			// If the time difference is greater than the minimum interval, include this photo
+			if timeDiff.Minutes() >= float64(minTimeIntervalMinutes) {
+				filteredPhotos = append(filteredPhotos, currentPhoto.Path)
+				lastIncludedTime = currentPhoto.Metadata.TakenDate
+			}
+		}
+	}
+
+	log.Printf("Filtered photos from %d to %d with minimum interval of %d minutes",
+		len(photos), len(filteredPhotos), minTimeIntervalMinutes)
+
+	return filteredPhotos, nil
 }

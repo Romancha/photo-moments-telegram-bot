@@ -27,7 +27,10 @@ const (
 )
 
 func main() {
-	log.Println("Starting bot with config:", cfg)
+	notSensitiveData := cfg
+	notSensitiveData.botToken = "********"
+
+	log.Println("Starting bot with config:", notSensitiveData)
 
 	// 1) Ensure the compressed photos folder
 	if _, err := os.Stat(tempProcessedPhotoPath); os.IsNotExist(err) {
@@ -475,23 +478,10 @@ func sendMemoryPhotos(requestType PhotoRequestType, yearsAgo int, update *tgbota
 	// Flag to track the first message (which will have sound)
 	isFirstMessage := true
 
-	// Determine total photo count limit
-	var totalPhotoLimit int
-	if requestType == RequestTypeToday && update == nil {
-		// For cron job with today photos, use the configured limit
-		totalPhotoLimit = cfg.memoriesPhotoCount
-	} else if requestType == RequestTypeToday {
-		// For manual /today command, use default limit
-		totalPhotoLimit = 20
-	} else {
-		// For memories, use default limit
-		totalPhotoLimit = 20
-	}
-
 	// Calculate how many photos to take from each year
 	// to not exceed the total limit
 	photosPerYear := make(map[int]int)
-	remainingPhotos := totalPhotoLimit
+	remainingPhotos := cfg.memoriesPhotoCount
 
 	// First pass: ensure at least one photo per year if possible
 	for _, year := range years {
@@ -569,9 +559,20 @@ func sendMemoryPhotos(requestType PhotoRequestType, yearsAgo int, update *tgbota
 
 		// Limit the number of photos for this year based on our calculation
 		if len(yearPhotos) > photosPerYear[year] {
-			// Shuffle and take the calculated number
-			shuffleStrings(yearPhotos)
-			yearPhotos = yearPhotos[:photosPerYear[year]]
+			// First filter similar photos within each year
+			filteredYearPhotos, err := FilterSimilarPhotos(yearPhotos)
+			if err != nil {
+				log.Printf("Error filtering similar photos for year %d: %v", year, err)
+				filteredYearPhotos = yearPhotos // Fallback to original photos
+			}
+
+			// If we still have more photos than needed after filtering, shuffle and take the calculated number
+			if len(filteredYearPhotos) > photosPerYear[year] {
+				shuffleStrings(filteredYearPhotos)
+				yearPhotos = filteredYearPhotos[:photosPerYear[year]]
+			} else {
+				yearPhotos = filteredYearPhotos
+			}
 		}
 
 		// Process photos for this year
@@ -590,6 +591,16 @@ func sendMemoryPhotos(requestType PhotoRequestType, yearsAgo int, update *tgbota
 		// Send photos for this year
 		var mediaGroup []interface{}
 		var originalPhotos []string // Store original photo paths for this year
+
+		// Ensure we don't exceed Telegram's limit of 10 photos per media group
+		maxPhotosInGroup := 10
+		if len(processedPhotos) > maxPhotosInGroup {
+			log.Printf("Limiting photos for year %d from %d to %d due to Telegram API limitations",
+				year, len(processedPhotos), maxPhotosInGroup)
+			processedPhotos = processedPhotos[:maxPhotosInGroup]
+			yearPhotos = yearPhotos[:maxPhotosInGroup]
+		}
+
 		for i, path := range processedPhotos {
 			photo := tgbotapi.NewInputMediaPhoto(tgbotapi.FilePath(path))
 
