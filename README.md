@@ -76,7 +76,6 @@ library [libvips](https://www.libvips.org/).
 | FM_SEND_PHOTO_CRON_SPEC  | [Cron](https://en.wikipedia.org/wiki/Cron) to send random photos. Default ``0 10 * * *``                                               |
 | FM_MEMORIES_CRON_SPEC    | [Cron](https://en.wikipedia.org/wiki/Cron) to send photos from this day in different years. Default ``0 12 * * *``                     |
 | FM_MEMORIES_PHOTO_COUNT  | Total number of photos to send for memories across all years. Default ``5``                                                            |
-| FM_MEMORIES_YEARS_AGO    | Years for which to send memories. You can specify multiple years with separator ``;``. Default ``1;2;3;5;7;10``                        |
 | FM_REINDEX_CRON_SPEC     | [Cron](https://en.wikipedia.org/wiki/Cron) for automatic differential reindexing. Default ``0 0 * * 0`` (weekly on Sunday at midnight) |
 
 ## Commands
