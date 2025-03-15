@@ -517,6 +517,7 @@ func sendMemoryPhotos(requestType PhotoRequestType, yearsAgo int, update *tgbota
 
 		// Send photos for this year
 		var mediaGroup []interface{}
+		var originalPhotos []string // Store original photo paths for this year
 		for i, path := range processedPhotos {
 			photo := tgbotapi.NewInputMediaPhoto(tgbotapi.FilePath(path))
 
@@ -534,6 +535,8 @@ func sendMemoryPhotos(requestType PhotoRequestType, yearsAgo int, update *tgbota
 			}
 
 			mediaGroup = append(mediaGroup, photo)
+			// Store original photo path for each processed photo
+			originalPhotos = append(originalPhotos, yearPhotos[i])
 		}
 
 		mediaMsg := tgbotapi.NewMediaGroup(chatId, mediaGroup)
@@ -545,10 +548,53 @@ func sendMemoryPhotos(requestType PhotoRequestType, yearsAgo int, update *tgbota
 		}
 		isFirstMessage = false
 
-		_, err = bot.SendMediaGroup(mediaMsg)
+		// Send the media group and store metadata for /info command
+		sentMessages, err := bot.SendMediaGroup(mediaMsg)
 		if err != nil {
 			log.Println(err)
 			sendSafeReplyText(chatId, *replyMessageId, bot, fmt.Sprintf("Error sending photos for year %d: %v", year, err))
+			continue
+		}
+
+		// Get the next sending number for this group
+		sendingNumber := getNextSendingNumber()
+
+		// Store metadata for each photo in the group
+		var photoRecords []PhotoRecord
+		for i, msg := range sentMessages {
+			if i >= len(originalPhotos) {
+				log.Printf("Warning: sent message index %d exceeds original photos length %d", i, len(originalPhotos))
+				continue
+			}
+
+			originalPath := originalPhotos[i]
+
+			// Store individual photo metadata
+			meta := PhotoMessageMeta{
+				SendingNumber: sendingNumber,
+				PhotoIndex:    i + 1,
+				PhotoPath:     originalPath,
+			}
+			err := storePhotoMsgMeta(msg.MessageID, meta)
+			if err != nil {
+				log.Printf("Failed to store photo meta for year %d: %v", year, err)
+			}
+
+			// Add to photo records for group-level record
+			photoRecords = append(photoRecords, PhotoRecord{
+				Number: i + 1,
+				Path:   originalPath,
+			})
+		}
+
+		// Store group-level sending record
+		if len(sentMessages) > 0 {
+			ps := PhotoSending{
+				NumberOfSending: sendingNumber,
+				MessageId:       sentMessages[0].MessageID,
+				Photos:          photoRecords,
+			}
+			storeSending(ps)
 		}
 	}
 
