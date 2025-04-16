@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
+
+	tgbotapi "github.com/OvyFlash/telegram-bot-api"
 )
 
 func find(root string, ext []string) []string {
@@ -109,4 +112,72 @@ func formatDuration(seconds float64) string {
 		return fmt.Sprintf("%d min %d sec", minutes, secs)
 	}
 	return fmt.Sprintf("%d sec", secs)
+}
+
+// sendMediaGroupWithRetry attempts to send a media group with retries
+// in case of network or API errors
+func sendMediaGroupWithRetry(bot *tgbotapi.BotAPI, mediaMsg tgbotapi.MediaGroupConfig) ([]tgbotapi.Message, error) {
+	maxRetries := 5
+	initialRetryDelay := 2 * time.Second
+
+	var sentMessages []tgbotapi.Message
+	var err error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		sentMessages, err = bot.SendMediaGroup(mediaMsg)
+		if err == nil {
+			return sentMessages, nil
+		}
+
+		// Log the error
+		log.Printf("Error sending media group (attempt %d/%d): %v",
+			attempt+1, maxRetries, err)
+
+		// If this was the last attempt, return the error
+		if attempt >= maxRetries-1 {
+			return nil, fmt.Errorf("failed to send media group after %d attempts: %w",
+				maxRetries, err)
+		}
+
+		// Calculate exponential backoff delay: 2s, 4s, 8s, 16s...
+		retryDelay := initialRetryDelay * time.Duration(1<<attempt)
+		log.Printf("Retrying in %s...", retryDelay)
+		time.Sleep(retryDelay)
+	}
+
+	return nil, err // This should never happen due to the return in the loop
+}
+
+// sendMessageWithRetry attempts to send a message with retries
+// in case of network or API errors
+func sendMessageWithRetry(bot *tgbotapi.BotAPI, msg tgbotapi.Chattable) (tgbotapi.Message, error) {
+	maxRetries := 5
+	initialRetryDelay := 2 * time.Second
+
+	var sentMessage tgbotapi.Message
+	var err error
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		sentMessage, err = bot.Send(msg)
+		if err == nil {
+			return sentMessage, nil
+		}
+
+		// Log the error
+		log.Printf("Error sending message (attempt %d/%d): %v",
+			attempt+1, maxRetries, err)
+
+		// If this was the last attempt, return the error
+		if attempt >= maxRetries-1 {
+			return tgbotapi.Message{}, fmt.Errorf("failed to send message after %d attempts: %w",
+				maxRetries, err)
+		}
+
+		// Calculate exponential backoff delay: 2s, 4s, 8s, 16s...
+		retryDelay := initialRetryDelay * time.Duration(1<<attempt)
+		log.Printf("Retrying in %s...", retryDelay)
+		time.Sleep(retryDelay)
+	}
+
+	return tgbotapi.Message{}, err // This should never happen due to the return in the loop
 }

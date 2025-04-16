@@ -56,9 +56,9 @@ func sendPhotoDescriptionMessage(chatId int64, messageId int, bot *tgbotapi.BotA
 
 	locationMsg := tgbotapi.NewLocation(chatId, latitude, longitude)
 
-	_, err = bot.Send(locationMsg)
+	_, err = sendMessageWithRetry(bot, locationMsg)
 	if err != nil {
-		log.Println(err)
+		log.Println("Failed to send location after all retries:", err)
 	}
 }
 
@@ -88,7 +88,12 @@ func sendRandomPhotoMessage(count int, update *tgbotapi.Update, bot *tgbotapi.Bo
 		chatId = cfg.chatId
 	}
 
-	bot.Send(tgbotapi.NewMessage(chatId, "📷 Sending random photos..."))
+	// Уведомление с retry механизмом
+	notifyMsg := tgbotapi.NewMessage(chatId, "📷 Sending random photos...")
+	_, err := sendMessageWithRetry(bot, notifyMsg)
+	if err != nil {
+		log.Println("Failed to send notification message:", err)
+	}
 
 	// 1) Get the next sending number
 	sendingNumber := getNextSendingNumber()
@@ -116,9 +121,9 @@ func sendRandomPhotoMessage(count int, update *tgbotapi.Update, bot *tgbotapi.Bo
 		mediaMsg.ReplyParameters.MessageID = *replyMessageId
 	}
 
-	sentMessages, err := bot.SendMediaGroup(mediaMsg)
+	sentMessages, err := sendMediaGroupWithRetry(bot, mediaMsg)
 	if err != nil {
-		log.Println(err)
+		log.Println("Failed to send photos after all retries:", err)
 		return
 	}
 
@@ -159,9 +164,9 @@ func sendSafeReplyText(chatId int64, replyMessageId int, bot *tgbotapi.BotAPI, t
 	msg := tgbotapi.NewMessage(chatId, text)
 	msg.ReplyParameters.MessageID = replyMessageId
 
-	_, err := bot.Send(msg)
+	_, err := sendMessageWithRetry(bot, msg)
 	if err != nil {
-		log.Println(err)
+		log.Println("Failed to send message after all retries:", err)
 	}
 }
 
@@ -206,7 +211,7 @@ func sendIndexingStatusMessage(chatId int64, replyMessageId int, bot *tgbotapi.B
 	msg := tgbotapi.NewMessage(chatId, statusMsg)
 	msg.ReplyParameters.MessageID = replyMessageId
 
-	sentMsg, err := bot.Send(msg)
+	sentMsg, err := sendMessageWithRetry(bot, msg)
 	if err != nil {
 		return 0, fmt.Errorf("error sending indexing status message: %v", err)
 	}
@@ -253,7 +258,7 @@ func updateIndexingStatusMessage(chatId int64, messageId int, bot *tgbotapi.BotA
 	}
 
 	editMsg := tgbotapi.NewEditMessageText(chatId, messageId, statusMsg)
-	_, err = bot.Send(editMsg)
+	_, err = sendMessageWithRetry(bot, editMsg)
 	if err != nil {
 		return fmt.Errorf("error updating indexing status message: %v", err)
 	}

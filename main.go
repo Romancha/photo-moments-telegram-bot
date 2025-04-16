@@ -131,8 +131,8 @@ func main() {
 
 			if update.Message.IsCommand() && update.Message.Command() == "start" {
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, startMessage)
-				if _, err := bot.Send(msg); err != nil {
-					log.Println("Failed send msg.", err)
+				if _, err := sendMessageWithRetry(bot, msg); err != nil {
+					log.Println("Failed send start msg after all retries:", err)
 				}
 				continue
 			}
@@ -632,9 +632,9 @@ func sendMemoryPhotos(requestType PhotoRequestType, yearsAgo int, update *tgbota
 		isFirstMessage = false
 
 		// Send the media group and store metadata for /info command
-		sentMessages, err := bot.SendMediaGroup(mediaMsg)
+		sentMessages, err := sendMediaGroupWithRetry(bot, mediaMsg)
 		if err != nil {
-			log.Println(err)
+			log.Println("Failed to send memory photos after all retries:", err)
 			sendSafeReplyText(chatId, *replyMessageId, bot, fmt.Sprintf("Error sending photos for year %d: %v", year, err))
 			continue
 		}
