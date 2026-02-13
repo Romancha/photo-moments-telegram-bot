@@ -78,6 +78,14 @@ library [libvips](https://www.libvips.org/).
 | FM_MEMORIES_PHOTO_COUNT  | Total number of photos to send for memories across all years. Default ``5``                                                            |
 | FM_REINDEX_CRON_SPEC     | [Cron](https://en.wikipedia.org/wiki/Cron) for automatic differential reindexing. Default ``0 0 * * 0`` (weekly on Sunday at midnight) |
 
+### Telegram Proxy Settings (Optional)
+
+| Param                    | Description                                                                          |
+|--------------------------|--------------------------------------------------------------------------------------|
+| FM_TELEGRAM_PROXY_URL    | HTTP proxy URL for Telegram API (e.g., ``http://proxy:8080``)                        |
+| FM_TELEGRAM_PROXY_USER   | Proxy username (optional)                                                            |
+| FM_TELEGRAM_PROXY_PASS   | Proxy password (optional)                                                            |
+
 ## Commands
 
 | Command        | Description                                                                                                |

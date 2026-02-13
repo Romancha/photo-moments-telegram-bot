@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -29,6 +31,9 @@ const (
 func main() {
 	notSensitiveData := cfg
 	notSensitiveData.botToken = "********"
+	if notSensitiveData.telegramProxyPass != "" {
+		notSensitiveData.telegramProxyPass = "********"
+	}
 
 	log.Println("Starting bot with config:", notSensitiveData)
 
@@ -59,9 +64,28 @@ func main() {
 		StartBackgroundIndexing(cfg.photoPath, 2)
 	}
 
-	bot, err := tgbotapi.NewBotAPI(cfg.botToken)
+	var bot *tgbotapi.BotAPI
+	if cfg.telegramProxyURL != "" {
+		proxyParsed, parseErr := url.Parse(cfg.telegramProxyURL)
+		if parseErr != nil {
+			log.Panicf("Invalid telegram proxy URL: %v", parseErr)
+		}
+		if cfg.telegramProxyUser != "" {
+			proxyParsed.User = url.UserPassword(cfg.telegramProxyUser, cfg.telegramProxyPass)
+		}
+		httpClient := &http.Client{
+			Transport: &http.Transport{Proxy: http.ProxyURL(proxyParsed)},
+		}
+		bot, err = tgbotapi.NewBotAPIWithClient(cfg.botToken, tgbotapi.APIEndpoint, httpClient)
+	} else {
+		bot, err = tgbotapi.NewBotAPI(cfg.botToken)
+	}
 	if err != nil {
 		log.Panic(err)
+	}
+	if cfg.telegramProxyURL != "" {
+		safeURL, _ := url.Parse(cfg.telegramProxyURL)
+		log.Printf("Using Telegram proxy: %s://%s", safeURL.Scheme, safeURL.Host)
 	}
 	bot.Debug = false
 	log.Printf("Authorized on account %s", bot.Self.UserName)

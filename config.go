@@ -20,6 +20,10 @@ var keyMemoriesCronSpec = "FM_MEMORIES_CRON_SPEC"
 var keyMemoriesPhotoCount = "FM_MEMORIES_PHOTO_COUNT"
 var keyReindexCronSpec = "FM_REINDEX_CRON_SPEC"
 
+var keyTelegramProxyURL = "FM_TELEGRAM_PROXY_URL"
+var keyTelegramProxyUser = "FM_TELEGRAM_PROXY_USER"
+var keyTelegramProxyPass = "FM_TELEGRAM_PROXY_PASS"
+
 type Config struct {
 	chatId             int64
 	allowedUserIds     []int64
@@ -33,6 +37,9 @@ type Config struct {
 	memoriesCronSpec   string
 	memoriesPhotoCount int
 	reindexCronSpec    string // Cron schedule for automatic reindexing
+	telegramProxyURL   string
+	telegramProxyUser  string
+	telegramProxyPass  string
 }
 
 // TODO: rewrite configs with go-flags
@@ -131,5 +138,8 @@ func getConfig() Config {
 		memoriesCronSpec:   memoriesCronSpec,
 		memoriesPhotoCount: memoriesPhotoCount,
 		reindexCronSpec:    reindexCronSpec,
+		telegramProxyURL:   os.Getenv(keyTelegramProxyURL),
+		telegramProxyUser:  os.Getenv(keyTelegramProxyUser),
+		telegramProxyPass:  os.Getenv(keyTelegramProxyPass),
 	}
 }
